@@ -1,0 +1,265 @@
+<!doctype html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>104th Cadet Evaluation</title>
+<style>
+:root{--ink:#1f2b2a;--accent:#6b1f1f;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Courier New",monospace}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;overflow:hidden;color:var(--ink);font-family:var(--mono)}
+.bg{position:fixed;inset:0;background:url("parchment.jpg") center/cover no-repeat}
+.bg:after{content:"";position:absolute;inset:0;background:radial-gradient(900px 520px at 50% 45%,transparent 55%,rgba(0,0,0,.22)),radial-gradient(1200px 900px at 50% 50%,transparent 60%,rgba(0,0,0,.18));opacity:.35}
+.top{position:fixed;left:0;right:0;top:0;display:flex;justify-content:space-between;gap:12px;padding:18px 28px;pointer-events:none}
+.h1{font-weight:700;letter-spacing:.6px;text-transform:uppercase;font-size:18px}
+.sub{opacity:.75;font-size:12px;margin-top:6px}
+.stamp{font-size:12px;text-align:right;border:1px dashed rgba(0,0,0,.28);border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.18)}
+.stamp b{color:var(--accent)}
+.wrap{position:relative;height:100%;padding:90px 28px 90px}
+.text{max-width:920px;font-size:16px;line-height:1.95}
+.caret{display:inline-block;width:9px;height:18px;vertical-align:-3px;margin-left:4px;background:rgba(31,43,42,.65);animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.hint{font-size:12px;opacity:.65;margin-top:10px}
+.bottom{position:fixed;left:0;right:0;bottom:0;padding:18px 28px;display:flex;gap:14px;align-items:flex-end}
+.box{flex:1;max-width:920px;border:1px solid rgba(0,0,0,.22);border-radius:10px;background:rgba(255,255,255,.14);padding:12px 14px}
+.label{opacity:.8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;display:flex;justify-content:space-between;gap:12px}
+.pill{border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:2px 8px;font-size:11px;opacity:.75}
+.row{display:flex;gap:10px;align-items:center}
+input{flex:1;font:16px var(--mono);border:0;outline:0;background:transparent;color:var(--ink)}
+.btn{font:12px var(--mono);text-transform:uppercase;padding:10px 12px;border-radius:10px;border:1px solid rgba(0,0,0,.22);background:rgba(255,255,255,.18);cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.hidden{display:none}
+#out .ln{display:block;white-space:pre-wrap}
+#out .dim{opacity:.35}
+#out .fade{opacity:.18}
+@media (prefers-reduced-motion:reduce){.caret{animation:none}}
+</style></head><body>
+<div class="bg"></div>
+
+<header class="top">
+  <div>
+    <div class="h1">104th Cadet Corps — Evaluation Program</div>
+    <div class="sub">Recruitment &amp; Aptitude Intake • Phase <span id="phaseNum">1</span></div>
+  </div>
+  <div class="stamp">FILE: <b>#104-INTAKE</b><br>STATUS: <b id="status">RECORDING</b></div>
+</header>
+
+<main class="wrap">
+  <div class="text">
+    <span id="out"></span><span class="caret"></span>
+    <div class="hint" id="hint">click / space / enter to begin</div>
+  </div>
+</main>
+
+<footer class="bottom">
+  <div class="box hidden" id="box">
+    <div class="label"><span id="prompt">your response</span><span class="pill" id="mode">locked</span></div>
+    <div class="row">
+      <input id="inp" maxlength="80" autocomplete="off" disabled>
+      <button class="btn" id="send" disabled>send</button>
+    </div>
+  </div>
+</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const out=$("out"),hint=$("hint"),box=$("box"),prompt=$("prompt"),inp=$("inp"),send=$("send");
+const phaseNum=$("phaseNum"),statusEl=$("status"),mode=$("mode");
+
+const intro=[
+  {t:"Starting..",g:900},{t:"",g:450},
+  {t:"104th Cadet Corps Evaluation Program.",g:900},{t:"",g:450},
+  {t:"This session is recorded.",g:700},
+  {t:"Respond clearly.",g:900},{t:"",g:450},
+  {t:"Hesitation will be noted.",g:1100},{t:"",g:450},
+  {t:"State your name.",g:700}
+];
+
+let started=0,AC=null,buf=null,master=null,last=0,q=Promise.resolve();
+let state={phase:1,name:localStorage.getItem("aot_cadet_name")||"",fear:0,hesitation:0,obedience:0,initiative:0,injuries:0,log:[]};
+
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const CM=55,CX=120;
+
+function enqueue(fn){q=q.then(fn).catch(()=>{});return q;}
+
+async function initAudio(){
+  if(AC) return;
+  AC=new (window.AudioContext||window.webkitAudioContext)();
+  master=AC.createGain(); master.gain.value=.9; master.connect(AC.destination);
+  const ab=await (await fetch("type.mp3")).arrayBuffer();
+  buf=await AC.decodeAudioData(ab);
+}
+function tick(){
+  if(!AC||!buf) return;
+  const t=AC.currentTime; if(t-last<.03) return; last=t;
+  const src=AC.createBufferSource(); src.buffer=buf;
+  const len=.055, st=Math.max(0,Math.random()*(buf.duration-len-.02));
+  const g=AC.createGain();
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(.9,t+.006);
+  g.gain.linearRampToValueAtTime(0,t+len);
+  src.connect(g); g.connect(master);
+  src.start(t,st,len);
+}
+
+/* buffer */
+const KEEP=18,DIM=4;
+let lines=[],cur="";
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function render(){
+  const n=lines.length, start=Math.max(0,n-(KEEP+DIM));
+  const view=lines.slice(start);
+  const html=view.map((l,i)=>{
+    const age=view.length-1-i;
+    const cls=age>=KEEP+2?"fade":age>=KEEP?"dim":"";
+    return `<span class="ln ${cls}">${esc(l)}</span>`;
+  }).join("");
+  out.innerHTML=html + (cur!==""?`<span class="ln">${esc(cur)}</span>`:"");
+}
+function pushLine(l){
+  lines.push(l);
+  const cap=KEEP+DIM+6;
+  if(lines.length>cap) lines=lines.slice(lines.length-cap);
+}
+
+async function typeChars(str){
+  for(let i=0;i<str.length;i++){
+    cur+=str[i];
+    tick();
+    render();
+    await wait(rand(CM,CX));
+  }
+}
+async function typeLine(str,gap=800){
+  if(str===""){
+    pushLine(""); cur=""; render();
+    await wait(450);
+    return;
+  }
+  await typeChars(str);
+  pushLine(cur); cur=""; render();
+  await wait(gap);
+}
+
+async function say(lines){
+  const arr=Array.isArray(lines)?lines:String(lines).split("\n");
+  for(const ln of arr) await typeLine(ln,650);
+}
+
+function showInput(label="your response",m="phase 1"){
+  box.classList.remove("hidden");
+  prompt.textContent=label;
+  mode.textContent=m;
+  inp.disabled=send.disabled=false;
+  inp.focus();
+}
+function lockInput(m="locked"){
+  inp.disabled=send.disabled=true;
+  mode.textContent=m;
+}
+
+function patchState(p){
+  if(!p) return;
+  for(const k in p) if(typeof state[k]==="number") state[k]+=Number(p[k]||0);
+}
+function safeParseJson(maybe){
+  try{return JSON.parse(maybe);}catch{
+    const s=String(maybe||""),a=s.indexOf("{"),b=s.lastIndexOf("}");
+    if(a>=0&&b>a){try{return JSON.parse(s.slice(a,b+1));}catch{}}
+    return {say:"…",prompt:"",statePatch:{},dead:false,deathNote:""};
+  }
+}
+async function askInstructor(userText){
+  const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userText,state})});
+  const txt=await r.text();
+  return safeParseJson(txt);
+}
+
+async function runIntro(){
+  for(const x of intro) await typeLine(x.t,x.g);
+  showInput("your response","phase 1");
+}
+
+async function enterPhase2(){
+  state.phase=2; phaseNum.textContent="2"; mode.textContent="phase 2";
+  lines=[]; cur=""; render();              // clear screen for phase 2
+  await say(["Phase 2: Field Evaluation.","Scenario will be delivered in segments.","One action only.",""]);
+  const first=await askInstructor("__BEGIN_PHASE_2__");
+  patchState(first.statePatch);
+  if(first.say) await say(first.say);
+  if(first.prompt) prompt.textContent=first.prompt;
+  if(first.dead){
+    statusEl.textContent="DECEASED";
+    lockInput("deceased");
+    if(first.deathNote) await say(["",first.deathNote]);
+  }
+}
+
+function start(){
+  if(started) return;
+  started=1;
+  hint.classList.add("hidden");
+  document.removeEventListener("click",start);
+  document.removeEventListener("keydown",keyStart);
+  initAudio().then(()=>enqueue(runIntro));
+}
+function keyStart(e){ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); start(); } }
+document.addEventListener("click",start);
+document.addEventListener("keydown",keyStart);
+
+send.addEventListener("click",()=>{
+  const v=inp.value.trim(); if(!v) return;
+  inp.value="";
+
+  if(state.phase===1){
+    const name=v;
+    lockInput("processing");
+    state.name=name;
+    localStorage.setItem("aot_cadet_name",name);
+    enqueue(async()=>{
+      await say(["","Name received: "+name,"Noted.","Profile initialized.","","Proceed when ready."]);
+      showInput("type: proceed","awaiting");
+      state.phase=1.5;
+    });
+    return;
+  }
+
+  if(state.phase===1.5){
+    if(v.toLowerCase()!=="proceed"){
+      enqueue(()=>say(["","Command rejected.","Type: proceed"]));
+      return;
+    }
+    lockInput("loading");
+    enqueue(async()=>{
+      await say(["","Acknowledged.","Loading evaluation module…",""]);
+      showInput("action","phase 2");
+      await enterPhase2();
+    });
+    return;
+  }
+
+  if(state.phase>=2){
+    const userText=v;
+    lockInput("processing");
+    enqueue(async()=>{
+      state.log.push({u:userText,t:Date.now()});
+      const res=await askInstructor(userText);
+      patchState(res.statePatch);
+      if(res.say) await say(["",...String(res.say).split("\n")]);
+      if(res.prompt) prompt.textContent=res.prompt;
+      if(res.dead){
+        statusEl.textContent="DECEASED";
+        lockInput("deceased");
+        if(res.deathNote) await say(["",res.deathNote]);
+      }else{
+        inp.disabled=send.disabled=false;
+        mode.textContent="phase 2";
+        inp.focus();
+      }
+    });
+  }
+});
+inp.addEventListener("keydown",e=>{ if(e.key==="Enter") send.click(); });
+
+render();
+</script>
+</body></html>
