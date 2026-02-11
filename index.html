@@ -158,20 +158,27 @@ function lockInput(m="locked"){
 }
 
 function patchState(p){
-  if(!p) return;
+  if(!p || typeof p!=="object") return;
   for(const k in p) if(typeof state[k]==="number") state[k]+=Number(p[k]||0);
 }
-function safeParseJson(maybe){
-  try{return JSON.parse(maybe);}catch{
-    const s=String(maybe||""),a=s.indexOf("{"),b=s.lastIndexOf("}");
-    if(a>=0&&b>a){try{return JSON.parse(s.slice(a,b+1));}catch{}}
-    return {say:"…",prompt:"",statePatch:{},dead:false,deathNote:""};
-  }
+
+function normalizeAI(d){
+  if(!d || typeof d!=="object") return {say:"INSTRUCTOR ENZO: …",prompt:"action",statePatch:{},dead:false,deathNote:""};
+  const o={
+    say: String(d.say ?? "INSTRUCTOR ENZO: …"),
+    prompt: String(d.prompt ?? "action"),
+    statePatch: (d.statePatch && typeof d.statePatch==="object") ? d.statePatch : {},
+    dead: !!d.dead,
+    deathNote: String(d.deathNote ?? "")
+  };
+  if(!o.say.startsWith("INSTRUCTOR ENZO: ")) o.say="INSTRUCTOR ENZO: "+o.say;
+  return o;
 }
+
 async function askInstructor(userText){
   const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userText,state})});
-  const txt=await r.text();
-  return safeParseJson(txt);
+  const d=await r.json().catch(()=>null);
+  return normalizeAI(d);
 }
 
 async function runIntro(){
@@ -181,9 +188,9 @@ async function runIntro(){
 
 async function enterPhase2(){
   state.phase=2; phaseNum.textContent="2"; mode.textContent="phase 2";
-  lines=[]; cur=""; render();              // clear screen for phase 2
-  await say(["Phase 2: Field Evaluation.","Scenario will be delivered in segments.","One action only.",""]);
-  const first=await askInstructor("__BEGIN_PHASE_2__");
+  lines=[]; cur=""; render();
+  await say(["INSTRUCTOR ENZO: Phase 2. Field Evaluation.","INSTRUCTOR ENZO: One action only.",""]);
+  const first=normalizeAI(await askInstructor("__BEGIN_PHASE_2__"));
   patchState(first.statePatch);
   if(first.say) await say(first.say);
   if(first.prompt) prompt.textContent=first.prompt;
@@ -242,7 +249,7 @@ send.addEventListener("click",()=>{
     lockInput("processing");
     enqueue(async()=>{
       state.log.push({u:userText,t:Date.now()});
-      const res=await askInstructor(userText);
+      const res=normalizeAI(await askInstructor(userText));
       patchState(res.statePatch);
       if(res.say) await say(["",...String(res.say).split("\n")]);
       if(res.prompt) prompt.textContent=res.prompt;
