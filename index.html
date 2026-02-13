@@ -934,76 +934,257 @@ const SCENES={
       {k:"B",label:"Dummy strikes (control).",fx:{initiative:+1,flag:"did_dummies"},next:"p3_station_dummies"},
       {k:"C",label:"Partner footwork (with Nat).",req:{},fx:{flag:"did_nat_station"},next:"p3_station_nat"},
       {k:"D",label:"Assist Mira (strap check).",fx:{flag:"helped_mira",rel:{k:"mira",d:+1}},next:"p3_station_mira"},
-      {k:"E",label:"Cool down / observe.",fx:{hesitation:+1,breakFlawless:true,flag:"observed_only"},next:"p3_evening_wrap"}
+      {k:"E",label:"Cool down / observe.",fx:{hesitation:+1,breakFlawless:true,flag:"observed_only"},next:"p3_observe_cooldown"}
     ]
   },
 
   p3_station_balance:{
-    text:()=>[
-      "A narrow beam. Chalk dust. Wind.",
-      "Your feet learn the line.",
-      "",
-      W("Again."),
-      W("Cleaner.")
-    ],
-    title:"after",
-    choices:[
-      {k:"1",label:"Push for perfect. Do extra runs.",fx:{initiative:+1,flag:"grit"},next:"p3_evening_wrap"},
-      {k:"2",label:"Stop when told.",fx:{obedience:+1},next:"p3_evening_wrap"},
-      {k:"3",label:"Slip once. Laugh it off.",fx:{breakFlawless:true,flag:"slipped"},next:"p3_evening_wrap"}
-    ]
-  },
+  text:()=>[
+    "A narrow beam. Chalk dust. Wind.",
+    "Your feet learn the line.",
+    "",
+    W("Again."),
+    W("Cleaner.")
+  ],
+  title:"after",
+  choices:[
+    {k:"1",label:"Push for perfect. Do extra runs.",fx:{initiative:+1,flag:"grit"},next:"p3_balance_extra"},
+    {k:"2",label:"Stop when told.",fx:{obedience:+1},next:"p3_evening_wrap"},
+    {k:"3",label:"Slip once. Laugh it off.",fx:{breakFlawless:true,flag:"slipped"},next:"p3_balance_slip"}
+  ]
+},
+
+p3_balance_extra:{
+  text:()=>[
+    "You stay on the beam after the others step down.",
+    "Your calves burn. The wind keeps testing you.",
+    "",
+    "From the edge of the yard, Instructor Enzo watches without expression.",
+    "",
+    "You don’t look away.",
+    "You don’t let your ankles shake mean anything."
+  ],
+  title:"after",
+  choices:[
+    {k:"A",label:"Step down when you’re steady.",fx:{obedience:+1,flag:"balance_control"},next:"p3_evening_wrap"},
+    {k:"B",label:"Do one more run. Quietly.",fx:{initiative:+1,flag:"balance_one_more",breakFlawless:true},next:"p3_evening_wrap"}
+  ]
+},
+
+p3_balance_slip:{
+  text:()=>[
+    "Your foot slides.",
+    "For a second, your stomach floats.",
+    "",
+    "You catch yourself hard and laugh like it was on purpose.",
+    "",
+    "Someone nearby laughs too—relieved more than amused.",
+    "Nat doesn’t.",
+    "",
+    "You climb back up anyway."
+  ],
+  title:"you do",
+  choices:[
+    {k:"A",label:"Run it again. No smile this time.",fx:{initiative:+1,flag:"balance_recovered"},next:"p3_evening_wrap"},
+    {k:"B",label:"Step down. Save your legs.",fx:{obedience:+1},next:"p3_evening_wrap"}
+  ]
+},
+
+p3_mira_strap_kind:{
+  text:()=>[
+    "Mira exhales like she’d been holding it for minutes.",
+    "",
+    N("Mira","Thank you."),
+    "",
+    "She doesn’t say it like a habit.",
+    "She says it like she’s choosing to trust you."
+  ],
+  title:"you reply",
+  choices:[
+    {k:"A",label:"\"Anytime.\" (mean it)",fx:{rel:{k:"mira",d:+1},flag:"mira_soft"},next:"p3_evening_wrap"},
+    {k:"B",label:"Nod. Keep it simple.",fx:{flag:"mira_simple"},next:"p3_evening_wrap"}
+  ]
+},
+
+p3_mira_strap_blunt:{
+  text:()=>[
+    "Mira’s face tightens for half a second.",
+    "",
+    N("Mira","…Yeah. I know."),
+    "",
+    "She looks down at the strap like it betrayed her.",
+    "Then she straightens her shoulders anyway."
+  ],
+  title:"you do",
+  choices:[
+    {k:"A",label:"\"Sorry.\" (soften it)",fx:{rel:{k:"mira",d:+1},flag:"mira_repair"},next:"p3_evening_wrap"},
+    {k:"B",label:"Let it sit. Move on.",fx:{flag:"mira_distance",breakFlawless:true},next:"p3_evening_wrap"}
+  ]
+},
+
+p3_mira_strap_sharp:{
+  text:()=>[
+    "The words leave your mouth too fast.",
+    "",
+    "Mira blinks once—like she’s been tapped.",
+    N("Mira","…Okay."),
+    "",
+    "She turns away so you don’t see what it does to her face.",
+    "You feel it anyway."
+  ],
+  title:"you decide",
+  choices:[
+    {k:"A",label:"\"Hey— I didn’t mean it like that.\"",fx:{rel:{k:"mira",d:+1},flag:"mira_apology"},next:"p3_evening_wrap"},
+    {k:"B",label:"Say nothing. Let the distance form.",fx:{breakFlawless:true,flag:"mira_wall"},next:"p3_evening_wrap"}
+  ]
+},
+
 
   p3_station_dummies:{
-    text:()=>[
-      "Wooden dummies stare like they understand you.",
-      "Your strikes thud. Too hard. Too soft.",
-      "",
-      W("Control is mercy."),
-      W("Mercy is speed.")
-    ],
-    title:"you adjust",
-    choices:[
-      {k:"1",label:"Slow down. Clean technique.",fx:{obedience:+1},next:"p3_evening_wrap"},
-      {k:"2",label:"Hit harder. Prove a point.",fx:{breakFlawless:true,flag:"overhit",rel:{k:"nat",d:+1}},next:"p3_evening_wrap"},
-      {k:"3",label:"Ask Steve to spot you.",fx:{rel:{k:"steve",d:+1},flag:"steve_spot"},next:"p3_evening_wrap"}
-    ]
-  },
+  text:()=>[
+    "Wooden dummies stare like they understand you.",
+    "Your strikes thud. Too hard. Too soft.",
+    "",
+    W("Control is mercy."),
+    W("Mercy is speed.")
+  ],
+  title:"you adjust",
+  choices:[
+    {k:"1",label:"Slow down. Clean technique.",fx:{obedience:+1},next:"p3_evening_wrap"},
+    {k:"2",label:"Hit harder. Prove a point.",fx:{breakFlawless:true,flag:"overhit",rel:{k:"nat",d:+1}},next:"p3_evening_wrap"},
+    {k:"3",label:"Ask Steve to spot you.",fx:{rel:{k:"steve",d:+1},flag:"steve_spot"},next:"p3_dummies_steve_spot"}
+  ]
+},
+
+p3_dummies_steve_spot:{
+  text:()=>[
+    "Steve steps behind you and squints like he’s a real instructor.",
+    "",
+    N("Steve","Okay. Again. Same speed."),
+    N("Steve","But this time— don’t swing angry."),
+    "",
+    "You strike.",
+    "The blade lands cleaner. Quieter.",
+    "",
+    "Steve nods once, like it matters.",
+    N("Steve","There. That’s you. Not the noise in your chest.")
+  ],
+  title:"after",
+  choices:[
+    {k:"A",label:"\"Thanks.\" (breathe)",fx:{rel:{k:"steve",d:+1},flag:"steve_coached"},next:"p3_evening_wrap"},
+    {k:"B",label:"Go again. One more clean hit.",fx:{initiative:+1,flag:"extra_rep"},next:"p3_evening_wrap"}
+  ]
+},
 
   p3_station_mira:{
-    text:()=>[
-      "Mira’s strap is twisted. She’s trying not to panic about it.",
-      "",
-      N("Mira","Sorry. It’s stupid."),
-      "It isn’t.",
-      "",
-      "You fix it with steady hands."
-    ],
-    title:"you say",
-    choices:[
-      {k:"A",label:"\"Not stupid. We’ve got time.\"",fx:{rel:{k:"mira",d:+2},flag:"mira_trust"},next:"p3_evening_wrap"},
-      {k:"B",label:"\"Just check it next time.\"",fx:{breakFlawless:true,rel:{k:"mira",d:-1}},next:"p3_evening_wrap"},
-      {k:"C",label:"\"Don’t thank me.\" (too sharp)",fx:{breakFlawless:true,flag:"pushed_mira"},next:"p3_evening_wrap"}
-    ]
-  },
+  text:()=>[
+    "Mira’s strap is twisted. She’s trying not to panic about it.",
+    "",
+    N("Mira","Sorry. It’s stupid."),
+    "It isn’t.",
+    "",
+    "You fix it with steady hands."
+  ],
+  title:"you say",
+  choices:[
+    {k:"A",label:"\"Not stupid. We’ve got time.\"",fx:{rel:{k:"mira",d:+2},flag:"mira_trust"},next:"p3_mira_strap_kind"},
+    {k:"B",label:"\"Just check it next time.\"",fx:{breakFlawless:true,rel:{k:"mira",d:-1}},next:"p3_mira_strap_blunt"},
+    {k:"C",label:"\"Don’t thank me.\" (too sharp)",fx:{breakFlawless:true,flag:"pushed_mira"},next:"p3_mira_strap_sharp"}
+  ]
+},
 
   p3_station_nat:{
-    text:()=>[
-      "Nat’s assigned as your partner.",
-      "He doesn’t greet you.",
-      "",
-      N("Nat","Footwork."),
-      N("Nat","If you trip, don’t blame the ground."),
-      "",
-      "You circle. You feint. He counters fast."
-    ],
-    title:"you choose",
-    choices:[
-      {k:"1",label:"Stay composed. Copy his timing.",fx:{initiative:+1,rel:{k:"nat",d:+1},flag:"did_well_vs_nat"},next:"p3_evening_wrap"},
-      {k:"2",label:"Go aggressive. Force contact.",fx:{breakFlawless:true,rel:{k:"nat",d:-1},flag:"overaggressive"},next:"p3_evening_wrap"},
-      {k:"3",label:"Back off. Let it end.",fx:{breakFlawless:true,rel:{k:"nat",d:-2},flag:"folded"},next:"p3_evening_wrap"}
-    ]
-  },
+  text:()=>[
+    "Nat’s assigned as your partner.",
+    "He doesn’t greet you.",
+    "",
+    N("Nat","Footwork."),
+    N("Nat","If you trip, don’t blame the ground."),
+    "",
+    "You circle. You feint. He counters fast."
+  ],
+  title:"you choose",
+  choices:[
+    {k:"1",label:"Stay composed. Copy his timing.",fx:{initiative:+1,rel:{k:"nat",d:+1},flag:"did_well_vs_nat"},next:"p3_nat_footwork_composed"},
+    {k:"2",label:"Go aggressive. Force contact.",fx:{breakFlawless:true,rel:{k:"nat",d:-1},flag:"overaggressive"},next:"p3_nat_footwork_aggressive"},
+    {k:"3",label:"Back off. Let it end.",fx:{breakFlawless:true,rel:{k:"nat",d:-2},flag:"folded"},next:"p3_nat_footwork_fold"}
+  ]
+},
+
+p3_nat_footwork_composed:{
+  text:()=>[
+    "You stop trying to win and start trying to read him.",
+    "His timing isn’t random. It’s cruelly consistent.",
+    "",
+    "You match it once.",
+    "",
+    "Nat’s eyes flick up—quick.",
+    N("Nat","…Better."),
+    "",
+    "It’s the closest thing to praise you’ve heard from him."
+  ],
+  title:"after",
+  choices:[
+    {k:"A",label:"Hold that rhythm. Don’t chase.",fx:{initiative:+1,flag:"nat_rhythm"},next:"p3_evening_wrap"},
+    {k:"B",label:"End it clean. No extra hits.",fx:{obedience:+1},next:"p3_evening_wrap"}
+  ]
+},
+
+p3_nat_footwork_aggressive:{
+  text:()=>[
+    "You push into his space.",
+    "Force contact. Force an answer.",
+    "",
+    "Nat lets you in—then turns you.",
+    "Your boot catches. Your shoulder hits dirt.",
+    "",
+    "He offers a hand like it’s an insult.",
+    N("Nat","That’s what happens when you swing with your ego.")
+  ],
+  title:"you react",
+  choices:[
+    {k:"A",label:"Take the hand. Stand up.",fx:{obedience:+1,flag:"nat_swallowed"},next:"p3_evening_wrap"},
+    {k:"B",label:"Stand up without him.",fx:{breakFlawless:true,flag:"nat_refused",rel:{k:"nat",d:-1}},next:"p3_evening_wrap"}
+  ]
+},
+
+p3_nat_footwork_fold:{
+  text:()=>[
+    "You keep your distance.",
+    "Let the station end itself.",
+    "",
+    "Nat notices.",
+    "Of course he does.",
+    "",
+    N("Nat","If you’re afraid of getting hit, you’re already hit."),
+    "",
+    "Your face stays blank.",
+    "Your stomach doesn’t."
+  ],
+  title:"you do",
+  choices:[
+    {k:"A",label:"Try once. Step in—clean.",fx:{initiative:+1,flag:"nat_attempted"},next:"p3_evening_wrap"},
+    {k:"B",label:"Stay back. Survive the minute.",fx:{breakFlawless:true,flag:"nat_survived"},next:"p3_evening_wrap"}
+  ]
+},
+
+p3_observe_cooldown:{
+  text:()=>[
+    "You step off to the edge of the yard.",
+    "Stretch your fingers. Roll your shoulders.",
+    "",
+    "You watch other cadets fail in small ways.",
+    "A strap slips. A blade angle is wrong. A landing is too loud.",
+    "",
+    "It hits you: everyone here is scared.",
+    "Some people just wear it differently."
+  ],
+  title:"you decide",
+  choices:[
+    {k:"A",label:"Go back in. Pick a station.",fx:{initiative:+1,flag:"returned"},next:"p3_afternoon_entry"},
+    {k:"B",label:"Stay out a little longer.",fx:{hesitation:+1,breakFlawless:true,flag:"lingered"},next:"p3_evening_wrap"}
+  ]
+},
 
   p3_evening_wrap:{
     text:()=>[
@@ -1082,23 +1263,87 @@ const SCENES={
   },
 
   p3_night_table_ms:{
-    text:()=>[
-      "Mira shifts so you can sit.",
-      "Steve immediately pretends it was his idea.",
-      "",
-      N("Steve","You survived day one. That’s basically a medal."),
-      N("Mira","…Ignore him."),
-      "",
-      "For a minute, the stew isn’t disgusting.",
-      "Or maybe you just stop noticing."
-    ],
-    title:"you say",
-    choices:[
-      {k:"1",label:"\"I’m glad I’m not alone here.\"",fx:{rel:{k:"mira",d:+2},rel:{k:"steve",d:+1},flag:"night_bond"},next:"p3_night_end"},
-      {k:"2",label:"\"What’s Nat’s problem?\"",fx:{breakFlawless:true,flag:"nat_obsession",rel:{k:"mira",d:+1}},next:"p3_night_ms_nat"},
-      {k:"3",label:"\"Tell me something normal.\"",fx:{rel:{k:"steve",d:+2}},next:"p3_night_end"}
-    ]
-  },
+  text:()=>[
+    "Mira shifts so you can sit.",
+    "Steve immediately pretends it was his idea.",
+    "",
+    N("Steve","You survived day one. That’s basically a medal."),
+    N("Mira","…Ignore him."),
+    "",
+    "For a minute, the stew isn’t disgusting.",
+    "Or maybe you just stop noticing."
+  ],
+  title:"you say",
+  choices:[
+    {k:"1",label:"\"I’m glad I’m not alone here.\"",fx:{rel:{k:"mira",d:+2},rel:{k:"steve",d:+1},flag:"night_bond"},next:"p3_night_ms_bond"},
+    {k:"2",label:"\"What’s Nat’s problem?\"",fx:{breakFlawless:true,flag:"nat_obsession",rel:{k:"mira",d:+1}},next:"p3_night_ms_nat"},
+    {k:"3",label:"\"Tell me something normal.\"",fx:{rel:{k:"steve",d:+2}},next:"p3_night_ms_normal"}
+  ]
+},
+
+p3_night_ms_bond:{
+  text:()=>[
+    "Steve’s grin softens like it surprised him.",
+    "",
+    N("Steve","Yeah… same."),
+    N("Steve","I hate that it matters. But it does."),
+    "",
+    "Mira stirs her bowl twice. Then—",
+    N("Mira","If you wake up shaking, don’t pretend you didn’t."),
+    "",
+    "Her voice stays calm, like it’s a rule.",
+    "Like it’s allowed."
+  ],
+  title:"you answer",
+  choices:[
+    {k:"A",label:"\"Okay.\" (accept it)",fx:{rel:{k:"mira",d:+1},flag:"night_accept"},next:"p3_night_end"},
+    {k:"B",label:"\"I’m fine.\" (lie cleanly)",fx:{breakFlawless:true,flag:"night_lie"},next:"p3_night_end"},
+    {k:"C",label:"\"Thanks.\" (quiet)",fx:{rel:{k:"steve",d:+1}},next:"p3_night_end"}
+  ]
+},
+
+p3_night_ms_normal:{
+  text:()=>[
+    "Steve looks up like he’s searching the ceiling for something safe.",
+    "",
+    N("Steve","Normal… okay."),
+    N("Steve","Normal is: the bread’s always hard on Tuesdays."),
+    N("Steve","Normal is: somebody snores in Barracks B like a dying horse."),
+    "",
+    "Mira’s mouth twitches—almost a smile.",
+    N("Mira","He’s not wrong."),
+    "",
+    "The air loosens. Just a little."
+  ],
+  title:"you do",
+  choices:[
+    {k:"A",label:"Laugh once. Let it count.",fx:{rel:{k:"steve",d:+1},flag:"night_laugh"},next:"p3_night_end"},
+    {k:"B",label:"\"Tell me more.\" (stay with them)",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1},flag:"night_stay"},next:"p3_night_ms_normal_more"},
+    {k:"C",label:"Nod. Hold the quiet.",fx:{flag:"night_quiet"},next:"p3_night_end"}
+  ]
+},
+
+p3_night_ms_normal_more:{
+  text:()=>[
+    "Steve leans in like he’s sharing military intelligence.",
+    "",
+    N("Steve","If you want extra rations, befriend the kitchen guy."),
+    N("Steve","If you want peace, don’t challenge Nat when he’s bored."),
+    "",
+    "Mira taps her spoon against the bowl.. once.",
+    N("Mira","And don’t skip on sleep."),
+    N("Mira","Your head turns on you faster than any Titan does, you need 8 hours of sleep.. Okay?"),
+    "",
+    "Steve salutes her with his cup.",
+    N("Steve","Yes, mom.")
+  ],
+  title:"you say",
+  choices:[
+    {k:"A",label:"\"Noted.\" (smile)",fx:{rel:{k:"mira",d:+1}},next:"p3_night_end"},
+    {k:"B",label:"\"Thanks.\" (mean it)",fx:{rel:{k:"steve",d:+1},flag:"night_gratitude"},next:"p3_night_end"}
+  ]
+},
+
 
   p3_night_ms_nat:{
     text:()=>[
