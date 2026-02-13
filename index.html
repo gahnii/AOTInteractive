@@ -12,11 +12,13 @@ body{margin:0;overflow:hidden;color:var(--ink);font-family:var(--mono)}
 .blood img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.2) contrast(1.05)}
 .vignette{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .7s ease;background:radial-gradient(800px 520px at 50% 45%,transparent 55%,rgba(0,0,0,.55),rgba(0,0,0,.78))}
 
-.top{position:fixed;left:0;right:0;top:0;display:flex;justify-content:space-between;gap:12px;padding:18px 28px;pointer-events:none}
+.top{position:fixed;left:0;right:0;top:0;display:flex;justify-content:space-between;gap:12px;padding:18px 28px;pointer-events:none;z-index:5}
 .h1{font-weight:800;letter-spacing:.6px;text-transform:uppercase;font-size:18px}
 .sub{opacity:.75;font-size:12px;margin-top:6px}
 .stamp{font-size:12px;text-align:right;border:1px dashed rgba(0,0,0,.28);border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.18)}
 .stamp b{color:var(--accent)}
+.settingsBtn{pointer-events:auto;align-self:flex-start;margin-left:12px;width:34px;height:34px;border-radius:12px;border:1px solid rgba(0,0,0,.22);background:rgba(255,255,255,.18);cursor:pointer;font:16px var(--mono);display:grid;place-items:center}
+.settingsBtn:active{transform:translateY(1px)}
 
 .wrap{position:relative;height:100%;display:grid;align-items:center;padding:90px 28px 190px}
 .text{max-width:920px;font-size:16px;line-height:1.95;margin:0 auto}
@@ -24,24 +26,8 @@ body{margin:0;overflow:hidden;color:var(--ink);font-family:var(--mono)}
 @keyframes blink{50%{opacity:0}}
 .hint{font-size:12px;opacity:.65;margin-top:10px}
 
-/* footer -> always centered bottom middle */
-.bottom{
-  position:fixed;left:50%;transform:translateX(-50%);
-  bottom:0;
-  width:min(920px,92vw);
-  padding:18px 0 22px;
-  display:grid;
-  gap:12px;
-  justify-items:stretch;
-}
-
-.box{
-  border:1px solid rgba(0,0,0,.22);
-  border-radius:10px;
-  background:rgba(255,255,255,.08);
-  backdrop-filter:blur(2px);
-  padding:12px 14px
-}
+.bottom{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(920px,92vw);padding:18px 0 22px;display:grid;gap:12px;justify-items:stretch}
+.box{border:1px solid rgba(0,0,0,.22);border-radius:10px;background:rgba(255,255,255,.08);backdrop-filter:blur(2px);padding:12px 14px}
 .label{opacity:.8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;display:flex;justify-content:space-between;gap:12px}
 .pill{border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:2px 8px;font-size:11px;opacity:.75}
 .row{display:flex;gap:10px;align-items:center}
@@ -59,13 +45,25 @@ input{flex:1;font:16px var(--mono);border:0;outline:0;background:transparent;col
 .choices{display:grid;grid-template-columns:1fr;gap:10px}
 .choice{text-align:left}
 
-@media (prefers-reduced-motion:reduce){
-  .caret{animation:none}
-  .blood,.vignette{transition:none}
-}
+/* settings modal */
+.modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.25);backdrop-filter:blur(2px);z-index:50}
+.modal.show{display:grid}
+.panel{width:min(520px,92vw);border:1px solid rgba(0,0,0,.22);border-radius:14px;background:rgba(255,255,255,.16);padding:14px 14px 12px;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+.panel h2{margin:0 0 10px;font:800 14px var(--mono);letter-spacing:.6px;text-transform:uppercase;display:flex;justify-content:space-between;gap:12px}
+.close{font:12px var(--mono);text-transform:uppercase;padding:8px 10px;border-radius:10px;border:1px solid rgba(0,0,0,.22);background:rgba(255,255,255,.18);cursor:pointer}
+.opt{display:grid;gap:10px}
+.row2{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 10px;border-radius:12px;border:1px solid rgba(0,0,0,.18);background:rgba(255,255,255,.10)}
+.row2 small{opacity:.7;display:block;margin-top:4px;line-height:1.35}
+.sel{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.chip{font:12px var(--mono);padding:7px 10px;border-radius:999px;border:1px solid rgba(0,0,0,.20);background:rgba(255,255,255,.14);cursor:pointer}
+.chip.on{border-color:rgba(107,31,31,.55);background:rgba(107,31,31,.12)}
+.tog{display:flex;gap:10px;align-items:center}
+.tog input{width:18px;height:18px}
+.note{opacity:.75;font-size:12px;line-height:1.5;margin-top:10px}
+
+@media (prefers-reduced-motion:reduce){.caret{animation:none}.blood,.vignette{transition:none}}
 </style></head><body>
 <div class="bg"></div>
-
 <div class="blood" id="blood"><img src="blood.png" alt=""></div>
 <div class="vignette" id="vignette"></div>
 
@@ -74,7 +72,10 @@ input{flex:1;font:16px var(--mono);border:0;outline:0;background:transparent;col
     <div class="h1">104th Cadet Corps — Evaluation Program</div>
     <div class="sub">Recruitment &amp; Aptitude Intake • Phase <span id="phaseNum">1</span></div>
   </div>
-  <div class="stamp">FILE: <b>#104-INTAKE</b><br>STATUS: <b id="status">RECORDING</b></div>
+  <div style="display:flex;gap:10px;align-items:flex-start">
+    <button class="settingsBtn" id="openSettings" title="Settings" aria-label="Settings">⚙</button>
+    <div class="stamp">FILE: <b>#104-INTAKE</b><br>STATUS: <b id="status">RECORDING</b></div>
+  </div>
 </header>
 
 <main class="wrap">
@@ -104,62 +105,132 @@ input{flex:1;font:16px var(--mono);border:0;outline:0;background:transparent;col
   </div>
 </footer>
 
+<!-- Settings -->
+<div class="modal" id="settingsModal" aria-hidden="true">
+  <div class="panel" role="dialog" aria-modal="true" aria-label="Settings">
+    <h2><span>Settings</span><button class="close" id="closeSettings">close</button></h2>
+    <div class="opt">
+      <div class="row2">
+        <div>
+          <div style="font-weight:900">text speed</div>
+          <small>for replays, affects speed + pauses.</small>
+        </div>
+        <div class="sel" id="speedSel"></div>
+      </div>
+
+      <div class="row2">
+        <div>
+          <div style="font-weight:900">skip typing</div>
+          <small>double-tap click / space / enter to finish the current line.</small>
+        </div>
+        <label class="tog"><input type="checkbox" id="skipToggle"><span style="opacity:.85">enabled</span></label>
+      </div>
+    </div>
+
+    <div class="note">
+      if you're trying different routes, turn on <b>"skip typing"</b> and bump <b>"text speed"</b>.
+    </div>
+  </div>
+</div>
+
 <script>
-const $=id=>document.getElementById(id);
+const $=id=>document.getElementById(id),
+  clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),
+  wait=ms=>new Promise(r=>setTimeout(r,ms)),
+  rand=(a,b)=>a+Math.random()*(b-a);
+
 const out=$("out"),hint=$("hint"),phaseNum=$("phaseNum"),statusEl=$("status");
 const boxText=$("boxText"),prompt=$("prompt"),mode=$("mode"),inp=$("inp"),send=$("send");
 const boxChoice=$("boxChoice"),choiceTitle=$("choiceTitle"),choiceMode=$("choiceMode"),choicesEl=$("choices");
 const blood=$("blood"),vignette=$("vignette");
 const boxStatus=$("boxStatus"),statusTitle=$("statusTitle"),statusPill=$("statusPill"),statusText=$("statusText");
 
-const intro=[{t:"Starting..",g:900},{t:"",g:450},{t:"104th Cadet Corps Evaluation Program.",g:900},{t:"",g:450},{t:"This session is recorded.",g:700},{t:"Respond clearly.",g:900},{t:"",g:450},{t:"Hesitation will be noted.",g:1100},{t:"",g:450},{t:"State your name.",g:700}];
+/* settings (no 4x) */
+const SKEY="aot_eval_settings_v1";
+const settings=(()=>{try{return JSON.parse(localStorage.getItem(SKEY)||"{}")}catch{return{}}})();
+settings.speed=Number(settings.speed||1); if(![1,1.5,2].includes(settings.speed)) settings.speed=1;
+settings.skip=typeof settings.skip==="boolean"?settings.skip:true;
+const saveSettings=()=>localStorage.setItem(SKEY,JSON.stringify(settings));
 
-let started=0,q=Promise.resolve(),locked=false,sceneId=null;
-let state={phase:1,name:localStorage.getItem("aot_cadet_name")||"",fear:0,hesitation:0,obedience:0,initiative:0,injuries:0,dead:false};
+/* modal UI */
+const modal=$("settingsModal"),openBtn=$("openSettings"),closeBtn=$("closeSettings");
+const speedSel=$("speedSel"),skipToggle=$("skipToggle");
+const speeds=[1,1.5,2];
+const openSettings=()=>{modal.classList.add("show");modal.setAttribute("aria-hidden","false")};
+const closeSettings=()=>{modal.classList.remove("show");modal.setAttribute("aria-hidden","true")};
+openBtn.onclick=openSettings; closeBtn.onclick=closeSettings;
+modal.addEventListener("click",e=>{if(e.target===modal) closeSettings()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&modal.classList.contains("show")) closeSettings()});
+function renderSettings(){
+  speedSel.innerHTML="";
+  speeds.forEach(v=>{
+    const b=document.createElement("button");
+    b.className="chip"+(settings.speed===v?" on":"");
+    b.type="button"; b.textContent=v+"x";
+    b.onclick=()=>{settings.speed=v;saveSettings();renderSettings()};
+    speedSel.appendChild(b);
+  });
+  skipToggle.checked=!!settings.skip;
+}
+skipToggle.onchange=()=>{settings.skip=skipToggle.checked;saveSettings()};
+renderSettings();
 
-const wait=ms=>new Promise(r=>setTimeout(r,ms)), rand=(a,b)=>a+Math.random()*(b-a);
-const CM=55,CX=120, clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+/* intro */
+const intro=[
+  {t:"Starting..",g:900},{t:"",g:450},
+  {t:"104th Cadet Corps Evaluation Program.",g:900},{t:"",g:450},
+  {t:"This session is recorded.",g:700},
+  {t:"Respond clearly.",g:900},{t:"",g:450},
+  {t:"Hesitation will be noted.",g:1100},{t:"",g:450},
+  {t:"State your name.",g:700}
+];
+
+/* persistent meta */
+const FLAGK="aot_flags_v1", RELK="aot_rel_v1", PATHK="aot_paths_v1", FLK="aot_flawless_v1";
+const loadJSON=(k,def)=>{try{return JSON.parse(localStorage.getItem(k)||"")||def}catch{return def}};
+const saveJSON=(k,v)=>localStorage.setItem(k,JSON.stringify(v||{}));
+
+/* state */
+let started=0,locked=false,sceneId=null,q=Promise.resolve();
+let state={
+  phase:1,
+  name:localStorage.getItem("aot_cadet_name")||"",
+  fear:0,hesitation:0,obedience:0,initiative:0,injuries:0,dead:false,
+  flags:loadJSON(FLAGK,{}),
+  rel:loadJSON(RELK,{}),
+  paths:loadJSON(PATHK,{}), // {mira:"anchor|avoid", steve:"friend|annoyed", nat:"owed|rival|respect"}
+  flawless: (localStorage.getItem(FLK)!=="0")
+};
 const enqueue=fn=>(q=q.then(fn).catch(()=>{}));
 
-/* ------- AUDIO (typing + subbass) ------- */
-let AC=null, typeBuf=null, subBuf=null, master=null, lastTick=0;
-let subSrc=null, subGain=null, subLP=null, subComp=null;
-
+/* ------- AUDIO ------- */
+let AC=null,typeBuf=null,subBuf=null,master=null,lastTick=0,subSrc=null,subGain=null,subLP=null,subComp=null;
 async function initAudio(){
   if(AC) return;
   AC=new (window.AudioContext||window.webkitAudioContext)();
   master=AC.createGain(); master.gain.value=1.25; master.connect(AC.destination);
-
-  const load=async(url)=>AC.decodeAudioData(await (await fetch(url)).arrayBuffer());
-  [typeBuf, subBuf]=await Promise.all([load("type.mp3"), load("subbass.mp3")]);
+  const load=async url=>AC.decodeAudioData(await (await fetch(url)).arrayBuffer());
+  [typeBuf,subBuf]=await Promise.all([load("type.mp3"),load("subbass.mp3")]);
 
   subGain=AC.createGain();
   subLP=AC.createBiquadFilter(); subLP.type="lowpass"; subLP.frequency.value=14000; subLP.Q.value=.7;
   subComp=AC.createDynamicsCompressor();
   subComp.threshold.value=-24; subComp.knee.value=30; subComp.ratio.value=6; subComp.attack.value=.01; subComp.release.value=.2;
-
   subGain.connect(subLP); subLP.connect(subComp); subComp.connect(master);
 }
-
 function tick(){
   if(!AC||!typeBuf) return;
   const t=AC.currentTime; if(t-lastTick<.03) return; lastTick=t;
   const src=AC.createBufferSource(); src.buffer=typeBuf;
   const len=.055, st=Math.max(0,Math.random()*(typeBuf.duration-len-.02));
   const g=AC.createGain();
-  g.gain.setValueAtTime(0,t);
-  g.gain.linearRampToValueAtTime(.85,t+.006);
-  g.gain.linearRampToValueAtTime(0,t+len);
-  src.connect(g); g.connect(master);
-  src.start(t,st,len);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.85,t+.006); g.gain.linearRampToValueAtTime(0,t+len);
+  src.connect(g); g.connect(master); src.start(t,st,len);
 }
-
 function startSubbass(){
   if(!AC||!subBuf||subSrc) return;
   subSrc=AC.createBufferSource(); subSrc.buffer=subBuf; subSrc.loop=true;
-  subGain.gain.value=0;
-  subSrc.connect(subGain);
-  subSrc.start();
+  subGain.gain.value=0; subSrc.connect(subGain); subSrc.start();
 }
 function stopSubbass(fadeMs=500){
   if(!AC||!subSrc) return;
@@ -167,57 +238,54 @@ function stopSubbass(fadeMs=500){
   subGain.gain.cancelScheduledValues(t);
   subGain.gain.setValueAtTime(subGain.gain.value,t);
   subGain.gain.linearRampToValueAtTime(0,t+fadeMs/1000);
-  const kill=subSrc; subSrc=null;
-  setTimeout(()=>{ try{kill.stop();}catch{} }, fadeMs+50);
+  const kill=subSrc; subSrc=null; setTimeout(()=>{try{kill.stop()}catch{}},fadeMs+50);
 }
-
-function setSubbassIntensity(x, ms=200){
+function setSubbassIntensity(x,ms=200){
   if(!AC||!subGain||!subLP) return;
   x=clamp(x,0,1);
-  const t=AC.currentTime, d=ms/1000;
-  const gain = 0.18 + 0.55*x;
-  const cutoff = 14000 - 12000*x;
-  const q = 0.7 + 2.2*x;
-
-  subGain.gain.cancelScheduledValues(t);
-  subGain.gain.setValueAtTime(subGain.gain.value,t);
-  subGain.gain.linearRampToValueAtTime(gain,t+d);
-
-  subLP.frequency.cancelScheduledValues(t);
-  subLP.frequency.setValueAtTime(subLP.frequency.value,t);
-  subLP.frequency.linearRampToValueAtTime(cutoff,t+d);
-
-  subLP.Q.cancelScheduledValues(t);
-  subLP.Q.setValueAtTime(subLP.Q.value,t);
-  subLP.Q.linearRampToValueAtTime(q,t+d);
+  const t=AC.currentTime,d=ms/1000,gain=0.18+0.55*x,cutoff=14000-12000*x,qq=0.7+2.2*x;
+  subGain.gain.cancelScheduledValues(t); subGain.gain.setValueAtTime(subGain.gain.value,t); subGain.gain.linearRampToValueAtTime(gain,t+d);
+  subLP.frequency.cancelScheduledValues(t); subLP.frequency.setValueAtTime(subLP.frequency.value,t); subLP.frequency.linearRampToValueAtTime(cutoff,t+d);
+  subLP.Q.cancelScheduledValues(t); subLP.Q.setValueAtTime(subLP.Q.value,t); subLP.Q.linearRampToValueAtTime(qq,t+d);
 }
 
 /* ------- OUTPUT ------- */
 const KEEP=9,DIM=2; let lines=[],cur="";
 const WHO0="\uE020",WHO1="\uE021",P0="\uE010",P1="\uE011";
-const W=t=>`${WHO0}INSTRUCTOR ENZO:${WHO1} ${t}`, PICK=t=>`${P0}${t}${P1}`;
+const W=t=>`${WHO0}INSTRUCTOR ENZO:${WHO1} ${t}`,
+      N=(name,t)=>`${WHO0}${name.toUpperCase()}:${WHO1} ${t}`,
+      PICK=t=>`${P0}${t}${P1}`;
 const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const markup=s=>esc(s).replaceAll(WHO0,'<span class="who">').replaceAll(WHO1,"</span>").replaceAll(P0,'<span class="pick">').replaceAll(P1,"</span>");
-
-function render(){
-  const n=lines.length, start=Math.max(0,n-(KEEP+DIM));
-  const view=lines.slice(start);
+const render=()=>{
+  const n=lines.length,start=Math.max(0,n-(KEEP+DIM)),view=lines.slice(start);
   out.innerHTML=view.map((l,i)=>{
-    const age=view.length-1-i, cls=age>=KEEP+1?"fade":age>=KEEP?"dim":"";
+    const age=view.length-1-i,cls=age>=KEEP+1?"fade":age>=KEEP?"dim":"";
     return `<span class="ln ${cls}">${markup(l)}</span>`;
-  }).join("") + (cur?`<span class="ln">${markup(cur)}</span>`:"");
+  }).join("")+(cur?`<span class="ln">${markup(cur)}</span>`:"");
+};
+const pushLine=l=>{lines.push(l);const cap=KEEP+DIM+5;if(lines.length>cap) lines=lines.slice(lines.length-cap)};
+
+/* skip logic */
+let skipReq=false,lastAct=0;
+function requestSkip(){
+  if(!settings.skip) return;
+  const now=performance.now();
+  if(now-lastAct<320) skipReq=true;
+  lastAct=now;
 }
-function pushLine(l){
-  lines.push(l);
-  const cap=KEEP+DIM+5;
-  if(lines.length>cap) lines=lines.slice(lines.length-cap);
-}
+
+/* speed-controlled typing */
+const BASE_CM=55,BASE_CX=120,sp=()=>Math.max(.25,Number(settings.speed||1));
 async function typeChars(str){
-  for(let i=0;i<str.length;i++){ cur+=str[i]; tick(); render(); await wait(rand(CM,CX)); }
+  for(let i=0;i<str.length;i++){
+    if(skipReq){cur+=str.slice(i);skipReq=false;render();return;}
+    cur+=str[i]; tick(); render(); await wait(rand(BASE_CM,BASE_CX)/sp());
+  }
 }
 async function typeLine(str,gap=780){
-  if(str===""){ pushLine(""); cur=""; render(); await wait(420); return; }
-  await typeChars(str); pushLine(cur); cur=""; render(); await wait(gap);
+  if(str===""){pushLine("");cur="";render();await wait(420/sp());return;}
+  await typeChars(str); pushLine(cur); cur=""; render(); await wait(gap/sp());
 }
 async function say(arr){
   arr=Array.isArray(arr)?arr:String(arr).split("\n");
@@ -225,315 +293,568 @@ async function say(arr){
 }
 
 /* ------- UI ------- */
-const hideAllBoxes=()=>{
-  boxStatus.classList.add("hidden");
-  boxText.classList.add("hidden");
-  boxChoice.classList.add("hidden");
-};
-const showText=(label,pill)=>{
-  hideAllBoxes();
-  boxText.classList.remove("hidden");
-  prompt.textContent=label; mode.textContent=pill;
-  inp.disabled=send.disabled=false; inp.focus();
-};
-const lockText=pill=>{ inp.disabled=send.disabled=true; mode.textContent=pill; };
-const showChoices=(title,pill)=>{
-  hideAllBoxes();
-  boxChoice.classList.remove("hidden");
-  choiceTitle.textContent=title; choiceMode.textContent=pill;
-};
-const showStatus=(title,pill,text)=>{
-  hideAllBoxes();
-  boxStatus.classList.remove("hidden");
-  statusTitle.textContent=title;
-  statusPill.textContent=pill;
-  statusText.textContent=text||"";
-};
+const hideAllBoxes=()=>{boxStatus.classList.add("hidden");boxText.classList.add("hidden");boxChoice.classList.add("hidden")};
+const showText=(label,pill)=>{hideAllBoxes();boxText.classList.remove("hidden");prompt.textContent=label;mode.textContent=pill;inp.disabled=send.disabled=false;inp.focus()};
+const lockText=pill=>{inp.disabled=send.disabled=true;mode.textContent=pill};
+const showChoices=(title,pill)=>{hideAllBoxes();boxChoice.classList.remove("hidden");choiceTitle.textContent=title;choiceMode.textContent=pill};
+const showStatus=(title,pill,text)=>{hideAllBoxes();boxStatus.classList.remove("hidden");statusTitle.textContent=title;statusPill.textContent=pill;statusText.textContent=text||""};
 const setStatus=s=>statusEl.textContent=s;
-const clearScreen=()=>{lines=[];cur="";render();};
+const clearScreen=()=>{lines=[];cur="";render()};
 const clearChoices=()=>choicesEl.innerHTML="";
+const setBlood=a=>blood.style.opacity=clamp(a,0,1),setVignette=a=>vignette.style.opacity=clamp(a,0,1);
 
-/* visuals */
-const setBlood=a=>{blood.style.opacity=Math.max(0,Math.min(1,a));};
-const setVignette=a=>{vignette.style.opacity=Math.max(0,Math.min(1,a));};
+/* meta helpers */
+const saveMeta=()=>{
+  saveJSON(FLAGK,state.flags||{});
+  saveJSON(RELK,state.rel||{});
+  saveJSON(PATHK,state.paths||{});
+  localStorage.setItem(FLK,state.flawless?"1":"0");
+};
+const hasFlag=k=>!!(state.flags&&state.flags[k]);
+const setFlag=(k,v=true)=>{state.flags=state.flags||{}; state.flags[k]=v; saveMeta()};
+const relAdd=(k,delta)=>{state.rel=state.rel||{}; state.rel[k]=(state.rel[k]||0)+delta; saveMeta()};
+const getRel=k=>(state.rel&&state.rel[k])||0;
+
+function setPath(char, val){
+  state.paths=state.paths||{};
+  if(state.paths[char]) return;               // lock on first set
+  state.paths[char]=val;
+  // also set flags for req convenience
+  setFlag(`${char}_path_${val}`,true);
+  saveMeta();
+}
+const getPath=char=>(state.paths&&state.paths[char])||"";
+
+const checkReq=req=>{
+  if(!req) return true;
+  if(req.flag && !hasFlag(req.flag)) return false;
+  if(req.nflag && hasFlag(req.nflag)) return false;
+  if(req.path){
+    const cur=getPath(req.path.k);
+    if(req.path.is && cur!==req.path.is) return false;
+    if(req.path.any && !req.path.any.includes(cur)) return false;
+    if(req.path.none && req.path.none.includes(cur)) return false;
+    if(req.path.set && cur) return false; // require "not set"
+  }
+  if(req.rel){
+    const cur=getRel(req.rel.k);
+    if(cur < (req.rel.min??0)) return false;
+  }
+  if(req.flawless && !state.flawless) return false;
+  return true;
+};
 
 function applyFx(fx){
   if(!fx) return;
-  for(const k in fx) if(typeof state[k]==="number") state[k]+=Number(fx[k]||0);
-  state.fear=clamp(state.fear,0,9); state.hesitation=clamp(state.hesitation,0,9);
+
+  // numeric stats
+  for(const k in fx){
+    if(typeof fx[k]==="number" && typeof state[k]==="number") state[k]+=Number(fx[k]||0);
+  }
+  state.fear=clamp(state.fear,0,9);
+  state.hesitation=clamp(state.hesitation,0,9);
+
+  // meta
+  if(fx.flag) setFlag(fx.flag,true);
+  if(fx.unflag) setFlag(fx.unflag,false);
+  if(fx.rel) relAdd(fx.rel.k, Number(fx.rel.d||0));
+  if(fx.setPath) setPath(fx.setPath.k, fx.setPath.v);
+
+  if(fx.breakFlawless){ state.flawless=false; saveMeta(); }
 }
 
-/* “MIGHT DIE” bed */
+/* bed */
 function setRisk(on){
   if(!AC) return;
-  if(on){
-    startSubbass();
-    setSubbassIntensity(0.35,260);
-    setVignette(0.18);
-  }else{
-    setSubbassIntensity(0.0,300);
-    setVignette(0.0);
-    stopSubbass(600);
-  }
+  if(on){startSubbass();setSubbassIntensity(0.35,260);setVignette(0.18)}
+  else{setSubbassIntensity(0,300);setVignette(0);stopSubbass(600)}
 }
 
-/* ------- PHASE 2 ------- */
+/* ------- SCENES ------- */
 const SCENES={
-  field_entry:{
-    text:s=>[
-      W("Phase 2. Field Evaluation."),
-      W(`Cadet ${s.name||"—"}. You will move when told.`),
-      "",
-      "You step into a training field.",
-      "Wind. Dry grass. A bell tower silhouette in the distance.",
-      "A single Titan target moves between ruined frames. It has not seen you."
-    ],
-    title:"choose",
-    choices:[
-      {k:"A",label:"stay low. approach from debris.",fx:{obedience:+1},next:"approach_debris"},
-      {k:"B",label:"sprint straight to close distance.",fx:{initiative:+1,hesitation:+1},next:"sprint_open"},
-      {k:"C",label:"wait. observe its pattern.",fx:{hesitation:+1},next:"observe"}
-    ]
-  },
+/* ===== PHASE 2 ===== */
+field_entry:{
+  text:s=>[
+    W("Phase 2. Field evaluation."),
+    W(`Cadet ${s.name||"—"}. Move when you’re told.`),
+    "",
+    "You step into a training field.",
+    "Wind. Dry grass. A bell tower silhouette in the distance.",
+    "A single Titan target moves between ruined frames. It hasn’t seen you."
+  ],
+  title:"choose",
+  choices:[
+    {k:"A",label:"stay low. approach from debris.",fx:{obedience:+1},next:"approach_debris"},
+    {k:"B",label:"sprint straight to close distance.",fx:{initiative:+1,hesitation:+1},next:"sprint_open"},
+    {k:"C",label:"wait. observe its pattern.",fx:{hesitation:+1},next:"observe"}
+  ]
+},
+observe:{
+  text:()=>[
+    "You hold your breath and watch.",
+    "It walks; three steps. pause. tilt head. repeat.",
+    "Your legs tense. The window closes.",
+    W("Now. Choose.")
+  ],
+  title:"choose",
+  choices:[
+    {k:"1",label:"approach from debris.",fx:{obedience:+1},next:"approach_debris"},
+    {k:"2",label:"sprint in.",fx:{initiative:+1,hesitation:+1},next:"sprint_open"},
+    {k:"3",label:"withdraw.",fx:{hesitation:+2,breakFlawless:true,flag:"withdrew_phase2"},next:"end_withdrawn"}
+  ]
+},
+approach_debris:{
+  text:()=>[
+    W("Good. Use cover."),
+    "You move between broken stone and splintered beams.",
+    "The Titan turns its head—slow. Searching.",
+    "You are within striking range."
+  ],
+  title:"one action",
+  choices:[
+    {k:"1",label:"aim for the eyes.",fx:{initiative:+1},next:"eyes_attempt"},
+    {k:"2",label:"cut the achilles.",fx:{obedience:+1},next:"ankle_attempt"},
+    {k:"3",label:"back off. reposition.",fx:{hesitation:+1},next:"reposition"}
+  ]
+},
+sprint_open:{
+  text:()=>[
+    W("Loud."),
+    "You break into a sprint.",
+    "The Titan’s head snaps toward you.",
+    "It sees you.",
+    "Your stomach drops."
+  ],
+  title:"react",
+  choices:[
+    {k:"1",label:"zigzag toward its blind spot.",fx:{initiative:+1},next:"blindspot"},
+    {k:"2",label:"keep charging. commit.",fx:{initiative:+2,fear:+1,breakFlawless:true,flag:"reckless_phase2"},next:"commit_charge"},
+    {k:"3",label:"abort. dive behind rubble.",fx:{obedience:+1,hesitation:+1},next:"dive_cover"}
+  ]
+},
+eyes_attempt:{
+  text:()=>[
+    "You angle upward.",
+    "Your blade lines with the eye socket—",
+    "The Titan jerks.",
+    "Your timing matters."
+  ],
+  title:"commit",
+  choices:[
+    {k:"1",label:"strike.",fx:{initiative:+1},next:"eyes_strike"},
+    {k:"2",label:"hesitate.",fx:{hesitation:+2,fear:+1,breakFlawless:true,flag:"hesitated_phase2"},next:"death_slow"}
+  ]
+},
+eyes_strike:{
+  text:()=>[
+    "Your blade lands. The Titan recoils.",
+    "The eye collapses. A wet snap.",
+    "It thrashes—blind panic on one side.",
+    "Stone bursts beside you.",
+    W("Move.")
+  ],
+  title:"next",
+  choices:[
+    {k:"1",label:"break contact. reset to cover.",fx:{obedience:+1},next:"end_clean"},
+    {k:"2",label:"stay in. finish the damage.",fx:{initiative:+1,fear:+1,breakFlawless:true,flag:"overcommit_phase2"},next:"end_overcommit"}
+  ]
+},
+ankle_attempt:{
+  text:()=>[
+    "You drop low.",
+    "You cut. Deep.",
+    "The Titan stumbles. Not down."
+  ],
+  title:"follow-up",
+  choices:[
+    {k:"1",label:"get out now.",fx:{obedience:+1,breakFlawless:true,flag:"messy_phase2"},next:"end_messy"},
+    {k:"2",label:"stay. keep cutting.",fx:{initiative:+1,fear:+1,breakFlawless:true,flag:"greedy_phase2"},next:"death_slow"}
+  ]
+},
+reposition:{
+  text:()=>[
+    "You pull back.",
+    "The Titan’s head turns—searching for the movement it felt.",
+    W("You’re bleeding time.")
+  ],
+  title:"choose",
+  choices:[
+    {k:"1",label:"re-engage.",fx:{initiative:+1},next:"eyes_attempt"},
+    {k:"2",label:"withdraw fully.",fx:{hesitation:+2,breakFlawless:true,flag:"withdrew_phase2"},next:"end_withdrawn"}
+  ]
+},
+blindspot:{
+  text:()=>[
+    "You cut left, then right.",
+    "The Titan swings late.",
+    "You slip behind it.",
+    W("Now.")
+  ],
+  title:"one action",
+  choices:[
+    {k:"1",label:"break away.",fx:{obedience:+1},next:"end_clean"},
+    {k:"2",label:"go for the eyes.",fx:{initiative:+1,breakFlawless:true,flag:"risked_phase2"},next:"eyes_attempt"}
+  ]
+},
+commit_charge:{
+  text:()=>[
+    "You commit.",
+    "The Titan’s shadow swallows the ground.",
+    "It reaches."
+  ],
+  title:"last chance",
+  choices:[
+    {k:"1",label:"duck under. pass through.",fx:{initiative:+2},next:"blindspot"},
+    {k:"2",label:"jump up. gamble.",fx:{fear:+2,breakFlawless:true,flag:"gambled_phase2"},next:"death_gamble"}
+  ]
+},
+dive_cover:{
+  text:()=>[
+    "You dive behind rubble.",
+    "Dust fills your mouth.",
+    "The Titan’s fingers scrape stone.",
+    "It didn’t get you."
+  ],
+  title:"next",
+  choices:[
+    {k:"1",label:"crawl away. reset.",fx:{obedience:+1},next:"approach_debris"},
+    {k:"2",label:"run again.",fx:{hesitation:+1,fear:+1,breakFlawless:true,flag:"panic_phase2"},next:"sprint_open"}
+  ]
+},
 
-  observe:{
-    text:()=>[
-      "You hold your breath and watch.",
-      "It walks; three steps. pause. tilt head. repeat.",
-      "Your legs tense. The window closes.",
-      W("Decision. Now.")
-    ],
-    title:"choose",
-    choices:[
-      {k:"1",label:"approach from debris.",fx:{obedience:+1},next:"approach_debris"},
-      {k:"2",label:"sprint in.",fx:{initiative:+1,hesitation:+1},next:"sprint_open"},
-      {k:"3",label:"withdraw.",fx:{hesitation:+2},next:"end_withdrawn"}
-    ]
-  },
+death_slow:{
+  death:true,
+  ramp:[0,.10,.18,.28,.42,.58,.72,.86,1],
+  sub:"Hesitation gets you killed.",
+  text:()=>[
+    "You hesitate.","Not long.","Just long enough.","",
+    "The titan grabs you.. and the air changes.","",
+    "The world snaps upward.","Your stomach drops behind you.","",
+    "You try to inhale.. but nothing comes in.","Panic sets in.","",
+    "Your voice tears out.","It turns into a sound you don’t recognize.","",
+    "The field tilts.. and the sky smears sideways.","Your vision tunnels. Your ears start ringing.","",
+    "You kick, you squirm.. but it doesn't let go.","You yell to your instructor.. but no one hears.","",
+    "A calm second passes—","like the world is waiting for you to stop.","",
+    "Then.. silence.","",
+    PICK("STATUS: DECEASED.")
+  ]
+},
+death_gamble:{
+  death:true,
+  ramp:[0,.10,.18,.28,.42,.58,.72,.86,1],
+  sub:"Gamble noted. Predictable outcome.",
+  text:()=>[
+    "You jump.","For a second— you're weightless.","You reach for height you do not have.","",
+    "The titan's face meets you in the air.","A hand closes around your ribs.","Pressure.",
+    "Your bones crack and fold.","You try to scream.","It comes out thin. Drowned.","",
+    "Sky.. the dirt. Sky.","",
+    "You hit once.","Then again.","",
+    "Your limbs stop responding.","",
+    PICK("STATUS: DECEASED.")
+  ]
+},
 
-  approach_debris:{
-    text:()=>[
-      W("Good. Use cover."),
-      "You move between broken stone and splintered beams.",
-      "The Titan turns its head—slow. Searching.",
-      "You are within striking range."
-    ],
-    title:"one action",
-    choices:[
-      {k:"1",label:"aim for the eyes.",fx:{initiative:+1},next:"eyes_attempt"},
-      {k:"2",label:"cut the achilles.",fx:{obedience:+1},next:"ankle_attempt"},
-      {k:"3",label:"back off. reposition.",fx:{hesitation:+1},next:"reposition"}
-    ]
-  },
+end_clean:{end:true,text:()=>[
+  "You disengage cleanly.","Your breathing steadies.",
+  W("Adequate. Controlled."),
+  W("Evaluation logged: PASS."),
+  "",PICK("End of Phase 2.")
+]},
+end_overcommit:{end:true,text:()=>[
+  "You stay in.",
+  "The Titan flails—blind panic—wild hands.",
+  "A near miss tears the air beside your face.",
+  "You pull away late. Not clean.",
+  W("You lived. That’s not the point."),
+  W("Evaluation logged: PASS (CONDITIONAL)."),
+  "",PICK("End of Phase 2.")
+]},
+end_messy:{end:true,text:()=>[
+  "You disengage.","Your hands keep shaking after you stop.",
+  W("You lived. That’s not the same as control."),
+  W("Evaluation logged: PASS (CONDITIONAL)."),
+  "",PICK("End of Phase 2.")
+]},
+end_withdrawn:{end:true,text:()=>[
+  "You withdraw.","The bell tower fades behind you.",
+  W("Withdrawal is a decision."),
+  W("Evaluation logged: FAIL."),
+  "",PICK("End of Phase 2.")
+]},
 
-  sprint_open:{
-    text:()=>[
-      W("Loud."),
-      "You break into a sprint.",
-      "The Titan’s head snaps toward you.",
-      "It sees you.",
-      "Your stomach drops."
-    ],
-    title:"react",
-    choices:[
-      {k:"1",label:"zigzag toward its blind spot.",fx:{initiative:+1},next:"blindspot"},
-      {k:"2",label:"keep charging. commit.",fx:{initiative:+2,fear:+1},next:"commit_charge"},
-      {k:"3",label:"abort. dive behind rubble.",fx:{obedience:+1,hesitation:+1},next:"dive_cover"}
-    ]
-  },
+/* ===== PHASE 3 — Day 1 (paths for Mira/Steve/Nat) ===== */
+p3_day1_entry:{
+  text:s=>[
+    W("Phase 3. Trainee corps."),
+    "",
+    "A barracks corridor. Boots on wood. Low lantern light.",
+    "For the first time since intake, voices overlap. Low. Human.",
+    W("Integrate. Don’t wander.")
+  ],
+  title:"you say",
+  choices:[
+    {k:"A",label:"\"…Hey.\"",fx:{setPath:{k:"mira",v:"anchor"},rel:{k:"mira",d:+1}},next:"p3_cadets_intro"},
+    {k:"B",label:s=>`"Name’s ${s.name||"cadet"}."`,fx:{initiative:+1,setPath:{k:"steve",v:"friend"},rel:{k:"steve",d:+1}},next:"p3_cadets_intro"},
+    {k:"C",label:"Say nothing.",fx:{hesitation:+1,flag:"silent"},next:"p3_cadets_intro"}
+  ]
+},
+p3_cadets_intro:{
+  text:()=>[
+    "Three cadets are near the bunks.",
+    "One looks up first. Tired eyes. Not unkind.",
+    "",
+    N("Cadet Mira","You’re the one from evaluation."),
+    N("Cadet Steve","If Enzo stared at you and you lived, you’re basically a legend."),
+    N("Cadet Nat","Name and placement. Quick."),
+    "",
+    "They’re waiting. Not judging yet.",
+    "Not openly."
+  ],
+  title:"you answer",
+  choices:[
+    // Mira anchor path option
+    {k:"1",label:"\"Just here to train.\"",fx:{rel:{k:"mira",d:+2},setPath:{k:"mira",v:"anchor"}},next:"p3_split_hub"},
+    // Steve comedic path option
+    {k:"2",label:"\"Relax. I’m not a legend.\" (to Steve)",fx:{rel:{k:"steve",d:+2},setPath:{k:"steve",v:"friend"}},next:"p3_split_hub"},
+    // Nat rivalry seed (break flawless)
+    {k:"3",label:"\"Placement? Does it matter?\"",fx:{rel:{k:"nat",d:-1},setPath:{k:"nat",v:"rival"},flag:"nat_enemy",breakFlawless:true},next:"p3_split_hub"},
+    // Nat cold respect seed
+    {k:"4",label:"\"Noted.\" (flat)",fx:{rel:{k:"nat",d:0},setPath:{k:"nat",v:"respect"}},req:{path:{k:"nat",set:true}},next:"p3_split_hub"}
+  ]
+},
+p3_split_hub:{
+  text:()=>[
+    "The air loosens a little.",
+    "Someone offers you a corner bunk.",
+    "Steve keeps talking just to fill the silence.",
+    "Nat watches like he’s counting mistakes.",
+    "",
+    "Outside, wind scrapes the shutters.",
+    W("Lights out soon.")
+  ],
+  title:"who do you face",
+  choices:[
+    {k:"A",label:"Talk to Mira.",fx:{},next:"p3_mira_talk"},
+    {k:"B",label:"Talk to Steve.",fx:{},next:"p3_steve_talk"},
+    {k:"C",label:"Talk to Nat.",fx:{},next:"p3_nat_talk"},
+    {k:"D",label:"Say nothing. Sleep time.",fx:{obedience:+1,flag:"quiet_night"},next:"p3_day1_end"}
+  ]
+},
 
-  eyes_attempt:{
-    text:()=>[
-      "You angle upward.",
-      "Your blade lines with the eye socket—",
-      "The Titan jerks.",
-      "Your timing matters."
-    ],
-    title:"commit",
-    choices:[
-      {k:"1",label:"strike.",fx:{initiative:+1},next:"eyes_strike"},
-      {k:"2",label:"hesitate.",fx:{hesitation:+2,fear:+1},next:"death_slow"}
-    ]
-  },
+/* Mira paths */
+p3_mira_talk:{
+  text:()=>[
+    N("Mira","First night always feels wrong."),
+    "She says it like she’s warning you, not scaring you.",
+    N("Mira","You… did fine out there."),
+    "Her voice is quiet. Shy.",
+    "It feels like someone lending a hand out in the dark."
+  ],
+  title:"you reply",
+  choices:[
+    {k:"1",label:"\"Thanks. I needed that.\"",
+      fx:{rel:{k:"mira",d:+2},setPath:{k:"mira",v:"anchor"},flag:"mira_anchor"},next:"p3_mira_after"},
+    {k:"2",label:"\"Don’t baby me.\"",
+      fx:{rel:{k:"mira",d:-2},setPath:{k:"mira",v:"avoid"},flag:"mira_avoid",breakFlawless:true},next:"p3_mira_after"},
+    {k:"3",label:"\"How do you sleep in here?\"",
+      fx:{rel:{k:"mira",d:+1}},next:"p3_mira_after"}
+  ]
+},
+p3_mira_after:{
+  text:()=>[
+    N("Mira","You learn to pretend you’re not listening."),
+    "She glances toward the door like she expects someone to appear.",
+    N("Mira","If you’re awake and you hear footsteps… don’t be the first to move."),
+    "",
+    "Comfort, with a knife hidden inside it."
+  ],
+  title:"you decide",
+  choices:[
+    {k:"A",label:"\"Understood.\"",fx:{obedience:+1,rel:{k:"mira",d:+1}},next:"p3_day1_end"},
+    {k:"B",label:"\"That’s… insane.\"",fx:{initiative:+1,rel:{k:"mira",d:-1},breakFlawless:true},next:"p3_day1_end"},
+    {k:"C",label:"Say nothing.",fx:{hesitation:+1,flag:"listened"},next:"p3_day1_end"}
+  ]
+},
 
-  eyes_strike:{
-    text:()=>[
-      "Your blade lands. The Titan recoils.",
-      "It thrashes blind on one side.",
-      "Stone bursts beside you.",
-      W("Move.")
-    ],
-    title:"escape",
-    choices:[
-      {k:"1",label:"retreat to cover.",fx:{obedience:+1},next:"end_clean"},
-      {k:"2",label:"press for more.",fx:{initiative:+1,fear:+1},next:"end_messy"}
-    ]
-  },
+/* Steve paths */
+p3_steve_talk:{
+  text:()=>[
+    N("Steve","Okay, official welcome gift: a secret."),
+    "He leans in like he’s about to confess a crime.",
+    N("Steve","The mushroom stew is *always* worse on Mondays!"),
+    "He grins at his own joke, then backs off.",
+    N("Steve","…You’re not gonna laugh.. are you?")
+  ],
+  title:"you answer",
+  choices:[
+    {k:"1",label:"Laugh. Just once.",
+      fx:{rel:{k:"steve",d:+2},setPath:{k:"steve",v:"friend"},flag:"steve_friend"},next:"p3_steve_after"},
+    {k:"2",label:"\"Stop talking.\"",
+      fx:{rel:{k:"steve",d:-2},setPath:{k:"steve",v:"annoyed"},flag:"steve_annoyed",breakFlawless:true},next:"p3_steve_after"},
+    {k:"3",label:"\"For real?\"",
+      fx:{rel:{k:"steve",d:+0}},next:"p3_steve_after"}
+  ]
+},
+p3_steve_after:{
+  text:()=>[
+    "Steve would scratch the back of his neck.",
+    N("Steve","Real? For real real."),
+    N("Steve","Real is… everyone here is pretending they’re fine."),
+    "He looks over at Nat without naming him.",
+    N("Steve","Some people pretend louder.")
+  ],
+  title:"you say",
+  choices:[
+    {k:"A",label:"\"Who?\"",fx:{rel:{k:"steve",d:+1},flag:"asked_steve_who"},next:"p3_day1_end"},
+    {k:"B",label:"\"Drop it.\"",fx:{obedience:+1},next:"p3_day1_end"},
+    {k:"C",label:"\"Yeah.\"",fx:{hesitation:+1,flag:"steve_hint"},next:"p3_day1_end"}
+  ]
+},
 
-  ankle_attempt:{
-    text:()=>[
-      "You drop low.",
-      "You cut. Deep.",
-      "The Titan stumbles. Not down."
-    ],
-    title:"follow-up",
-    choices:[
-      {k:"1",label:"get out now.",fx:{obedience:+1},next:"end_messy"},
-      {k:"2",label:"stay. keep cutting.",fx:{initiative:+1,fear:+1},next:"death_slow"}
-    ]
-  },
+/* Nat paths */
+p3_nat_talk:{
+  text:()=>[
+    "Nat doesn’t smile when you approach.",
+    "He looks you over like you’re a tool he doesn’t trust yet.",
+    N("Nat","You freeze under pressure."),
+    N("Nat","Or you pretend you don’t. Same result."),
+    "Steve stops talking. Mira goes still."
+  ],
+  title:"you respond",
+  choices:[
+    // choose nat path here if not set yet
+    {k:"1",label:"\"What do you want from me?\"",fx:{setPath:{k:"nat",v:"rival"},flag:"nat_enemy",rel:{k:"nat",d:-1},breakFlawless:true},req:{path:{k:"nat",set:true}},next:"p3_nat_rival"},
+    {k:"2",label:"\"Noted. I’ll fix it.\"",fx:{setPath:{k:"nat",v:"respect"},rel:{k:"nat",d:+1}},req:{path:{k:"nat",set:true}},next:"p3_nat_respect"},
+    {k:"3",label:"\"…\"",fx:{setPath:{k:"nat",v:"owed"},flag:"nat_owes_thread",rel:{k:"nat",d:0}},req:{path:{k:"nat",set:true}},next:"p3_nat_owed"},
+    // if already set, route accordingly
+    {k:"R",label:"(hold your stare)",fx:{},req:{path:{k:"nat",any:["rival"]}},next:"p3_nat_rival"},
+    {k:"S",label:"(keep it flat)",fx:{},req:{path:{k:"nat",any:["respect"]}},next:"p3_nat_respect"},
+    {k:"O",label:"(swallow it)",fx:{},req:{path:{k:"nat",any:["owed"]}},next:"p3_nat_owed"}
+  ]
+},
+p3_nat_rival:{
+  text:()=>[
+    "Nat’s eyes sharpen.",
+    N("Nat","Good. At least you have teeth."),
+    N("Nat","Don't bite the hand that fingers you.. or something like that."),
+    "He turns away like the conversation is already over.",
+    "Like you’re already behind him."
+  ],
+  title:"you do",
+  choices:[
+    {k:"A",label:"Stay quiet. Remember it.",fx:{flag:"resentment_seed",hesitation:+1},next:"p3_day1_end"},
+    {k:"B",label:"\"I’ll catch up.\"",
+      fx:{initiative:+1,flag:"plotting_seed",breakFlawless:true},next:"p3_day1_end"},
+    {k:"C",label:"Look at Mira.",fx:{rel:{k:"mira",d:+1}},next:"p3_day1_end"}
+  ]
+},
+p3_nat_respect:{
+  text:()=>[
+    "Nat’s jaw tightens. Not approval-- it's something else.",
+    N("Nat","Don’t make me repeat myself."),
+    "He lowers his voice just enough that it feels personal.",
+    N("Nat","If you embarrass the squad, I’ll fix it."),
+    "That word. Fix."
+  ],
+  title:"you reply",
+  choices:[
+    {k:"A",label:"\"Understood.\"",fx:{obedience:+1,flag:"nat_clinical"},next:"p3_day1_end"},
+    {k:"B",label:"\"Go ahead.\"",fx:{initiative:+1,flag:"nat_edge",breakFlawless:true},next:"p3_day1_end"}
+  ]
+},
+p3_nat_owed:{
+  text:()=>[
+    "Nat watches your silence land.",
+    "He seems satisfied, like he predicted you.",
+    N("Nat","Save your breath."),
+    N("Nat","You’ll need it when you mess up."),
+    "That doesn't sound like a threat...",
+    "It sounds like certainty."
+  ],
+  title:"you reply",
+  choices:[
+    {k:"A",label:"\"…Okay?\"",fx:{flag:"humiliated",hesitation:+1},next:"p3_day1_end"},
+    {k:"B",label:"\"Never.\"",fx:{initiative:+1,breakFlawless:true,flag:"pushback_seed"},next:"p3_day1_end"}
+  ]
+},
 
-  reposition:{
-    text:()=>[
-      "You pull back.",
-      "The Titan’s head turns—searching for the movement it felt.",
-      W("You’re bleeding time.")
-    ],
-    title:"choose",
-    choices:[
-      {k:"1",label:"re-engage.",fx:{initiative:+1},next:"eyes_attempt"},
-      {k:"2",label:"withdraw fully.",fx:{hesitation:+2},next:"end_withdrawn"}
-    ]
-  },
-
-  blindspot:{
-    text:()=>[
-      "You cut left, then right.",
-      "The Titan swings late.",
-      "You slip behind it.",
-      W("Now.")
-    ],
-    title:"one action",
-    choices:[
-      {k:"1",label:"break away.",fx:{obedience:+1},next:"end_clean"},
-      {k:"2",label:"go for the eyes.",fx:{initiative:+1},next:"end_messy"}
-    ]
-  },
-
-  commit_charge:{
-    text:()=>[
-      "You commit.",
-      "The Titan’s shadow swallows the ground.",
-      "It reaches."
-    ],
-    title:"last chance",
-    choices:[
-      {k:"1",label:"duck under. pass through.",fx:{initiative:+2},next:"blindspot"},
-      {k:"2",label:"jump up. gamble.",fx:{fear:+2},next:"death_slow"}
-    ]
-  },
-
-  dive_cover:{
-    text:()=>[
-      "You dive behind rubble.",
-      "Dust fills your mouth.",
-      "The Titan’s fingers scrape stone.",
-      "It didn’t get you."
-    ],
-    title:"next",
-    choices:[
-      {k:"1",label:"crawl away. reset.",fx:{obedience:+1},next:"approach_debris"},
-      {k:"2",label:"run again.",fx:{hesitation:+1,fear:+1},next:"sprint_open"}
-    ]
-  },
-
-  death_slow:{
-    death:true,
-    ramp:[0,.10,.18,.28,.42,.58,.72,.86,1],
-    text:()=>[
-      "You hesitate.","Not long.","Just long enough.","",
-      "The titan grabs you.. and the air changes.","",
-      "The world snaps upward.","Your stomach drops behind you.","",
-      "You try to inhale.. but nothing comes in.","Panic sets in.","",
-      "Your voice tears out.","It turns into a sound you don’t recognize.","",
-      "The field tilts.. and the sky smears sideways.","Your vision tunnels. Your ears start ringing.","",
-      "You kick, you squirm.. but it doesn't let go.","You yell to your instructor.. but no one hears.","",
-      "A calm second passes—","like the world is waiting for you to stop.","",
-      "Then.. silence.","",
-      PICK("STATUS: DECEASED.")
-    ],
-    sub:"Hesitation will get you nowhere."
-  },
-
-  end_clean:{ end:true, text:()=>[
-    "You disengage cleanly.","Your breathing steadies.",
-    W("Adequate control. Minimal wasted motion."),
-    W("Evaluation logged: PASS."),"",PICK("End of Phase 2.")
-  ]},
-
-  end_messy:{ end:true, text:()=>[
-    "You disengage.","Your hands keep shaking after you stop.",
-    W("You lived. That’s not the same as succeeding."),
-    W("Evaluation logged: PASS (CONDITIONAL)."),"",PICK("End of Phase 2.")
-  ]},
-
-  end_withdrawn:{ end:true, text:()=>[
-    "You withdraw.","The bell tower fades behind you.",
-    W("Withdrawal is also a decision."),
-    W("Evaluation logged: FAIL."),"",PICK("End of Phase 2.")
-  ]}
+p3_day1_end:{
+  end:true,
+  text:()=>[
+    "The barracks quiets.",
+    "Breathing settles. Wood creaks.",
+    "",
+    "You are not alone.",
+    "And somehow that doesn’t help.",
+    "",
+    PICK("End of Phase 3 — Day 1.")
+  ]
+}
 };
 
-/* choices */
+/* dynamic choice filtering */
+let currentChoices=[];
+function labelText(c){
+  const v=(typeof c.label==="function")?c.label(state):c.label;
+  return String(v||"");
+}
+
 function renderChoices(scene){
   clearChoices(); if(scene.death||scene.end) return;
 
-  const hasDeath = scene.choices?.some(c => (SCENES[c.next] && SCENES[c.next].death));
+  const raw=scene.choices||[];
+  currentChoices=raw.filter(c=>checkReq(c.req));
+
+  const hasDeath=currentChoices.some(c=>SCENES[c.next]?.death);
   setRisk(!!hasDeath);
 
-  showChoices(scene.title||"action","phase 2");
-  scene.choices.forEach((c,idx)=>{
+  showChoices(scene.title||"action","phase "+(state.phase>=2?state.phase:2));
+  currentChoices.forEach((c,idx)=>{
     const b=document.createElement("button");
     b.className="btn choice"; b.type="button";
-    b.innerHTML=`<span>${c.k}. ${c.label}</span>`;
+    b.innerHTML=`<span>${c.k}. ${labelText(c)}</span>`;
     b.onclick=()=>pick(idx);
     choicesEl.appendChild(b);
   });
 
   document.onkeydown=e=>{
-    if(locked) return;
+    if(locked||modal.classList.contains("show")) return;
     const key=e.key.toUpperCase();
-    const i=scene.choices.findIndex(x=>String(x.k).toUpperCase()===key);
-    if(i>=0){ e.preventDefault(); pick(i); }
+    const i=currentChoices.findIndex(x=>String(x.k).toUpperCase()===key);
+    if(i>=0){e.preventDefault();pick(i);}
   };
 }
 
-/* death sync */
-function applyDeathSync(i,total,ramp){
-  const p = total<=1 ? 1 : i/(total-1);
-  const bloodA = ramp[Math.min(i,ramp.length-1)] ?? (0.9*p);
-  setBlood(bloodA);
-  const intensity = clamp((p*p*1.05), 0, 1);
-  setSubbassIntensity(intensity, 180);
-  setVignette(0.25 + 0.55*intensity);
-}
-
+/* death: force slow + no skip, restore */
 async function runDeath(scene){
-  setRisk(false);
-  startSubbass();
-  setSubbassIntensity(0.10,120);
+  setRisk(false); startSubbass(); setSubbassIntensity(0.10,120);
+  const prevSpeed=settings.speed, prevSkip=settings.skip;
+  settings.speed=1; settings.skip=false;
 
   setStatus("DECEASED"); state.dead=true; locked=true;
-  showStatus("status","deceased", scene.sub||"Evaluation terminated.");
+  showStatus("status","deceased",scene.sub||"Evaluation terminated.");
 
-  const oldBT=blood.style.transition, oldVT=vignette.style.transition;
-  blood.style.transition="opacity .12s linear";
-  vignette.style.transition="opacity .12s linear";
+  const oldBT=blood.style.transition,oldVT=vignette.style.transition;
+  blood.style.transition="opacity .12s linear"; vignette.style.transition="opacity .12s linear";
 
   const ramp=scene.ramp||[0,.25,.5,.75,1];
   setBlood(ramp[0]??0); setVignette(.35);
 
   const seq=(typeof scene.text==="function"?scene.text(state):scene.text);
   for(let i=0;i<seq.length;i++){
-    applyDeathSync(i, seq.length, ramp);
+    const p=seq.length<=1?1:i/(seq.length-1);
+    const bloodA=ramp[Math.min(i,ramp.length-1)] ?? (0.9*p);
+    setBlood(bloodA);
+    const intensity=clamp(p*p*1.05,0,1);
+    setSubbassIntensity(intensity,180);
+    setVignette(0.25+0.55*intensity);
     await typeLine(seq[i],650);
   }
 
-  setSubbassIntensity(0,120);
-  stopSubbass(250);
+  setSubbassIntensity(0,120); stopSubbass(250);
+  blood.style.transition=oldBT; vignette.style.transition=oldVT;
 
-  blood.style.transition=oldBT;
-  vignette.style.transition=oldVT;
+  settings.speed=prevSpeed; settings.skip=prevSkip;
 }
 
 async function goto(id){
@@ -542,33 +863,53 @@ async function goto(id){
 
   if(scene.death){ await runDeath(scene); return; }
 
-  setBlood(0); setVignette(0);
-  hideAllBoxes(); // <- stops overlap during transitions
-
+  setBlood(0); setVignette(0); hideAllBoxes();
   await say(["",...(typeof scene.text==="function"?scene.text(state):scene.text)]);
-  if(scene.end){ setRisk(false); locked=true; showStatus("status","logged","Evaluation complete."); return; }
+
+  if(scene.end){
+    setRisk(false); locked=true;
+
+    // Phase transitions
+    if(state.phase===2){
+      showStatus("status","logged","Phase 2 complete.\nType: continue");
+      state.phase=2.5;
+      showText("type: continue","awaiting");
+      return;
+    }
+
+    showStatus("status","logged","Evaluation complete.");
+    return;
+  }
+
   renderChoices(scene); locked=false;
 }
 
 function pick(i){
-  const scene=SCENES[sceneId]; if(!scene||!scene.choices||locked) return;
-  const c=scene.choices[i]; if(!c) return;
+  const scene=SCENES[sceneId];
+  if(!scene||!scene.choices||locked) return;
+  const c=currentChoices[i]; if(!c) return;
   locked=true;
   enqueue(async()=>{
-    await say(["",PICK(`> ${c.k}. ${c.label}`)]);
+    await say(["",PICK(`> ${c.k}. ${labelText(c)}`)]);
     applyFx(c.fx);
     if(c.next) await goto(c.next);
   });
 }
 
 /* flow */
-async function runIntro(){ for(const x of intro) await typeLine(x.t,x.g); showText("your response","phase 1"); }
+async function runIntro(){
+  for(const x of intro) await typeLine(x.t,x.g);
+  showText("your response","phase 1");
+}
 async function enterPhase2(){
   state.phase=2; phaseNum.textContent="2"; setStatus("RECORDING");
-  setBlood(0); setVignette(0); setRisk(false);
-  state.dead=false; locked=false;
-  clearScreen();
-  await goto("field_entry");
+  setBlood(0); setVignette(0); setRisk(false); state.dead=false; locked=false;
+  clearScreen(); await goto("field_entry");
+}
+async function enterPhase3(){
+  state.phase=3; phaseNum.textContent="3"; setStatus("RECORDING");
+  setBlood(0); setVignette(0); setRisk(false); state.dead=false; locked=false;
+  clearScreen(); await goto("p3_day1_entry");
 }
 
 function start(){
@@ -581,16 +922,33 @@ function keyStart(e){ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); star
 document.addEventListener("click",start);
 document.addEventListener("keydown",keyStart);
 
+/* skip interactions */
+document.addEventListener("pointerdown",()=>{if(started&&!modal.classList.contains("show")) requestSkip()},{passive:true});
+document.addEventListener("keydown",e=>{if(!started||modal.classList.contains("show")) return; if(e.key===" "||e.key==="Enter") requestSkip()});
+
+/* text input */
 send.addEventListener("click",()=>{
   const v=inp.value.trim(); if(!v) return; inp.value="";
   if(state.phase===1){
     lockText("processing"); state.name=v; localStorage.setItem("aot_cadet_name",v);
-    enqueue(async()=>{ await say(["","Name received: "+v,"Noted.","Profile initialized.","","Proceed when ready."]); showText("type: proceed","awaiting"); state.phase=1.5; });
+    enqueue(async()=>{
+      await say(["","Name received: "+v,"Noted.","Profile initialized.","","Proceed when ready."]);
+      showText("type: proceed","awaiting");
+      state.phase=1.5;
+    });
     return;
   }
   if(state.phase===1.5){
     if(v.toLowerCase()!=="proceed"){ enqueue(()=>say(["","Command rejected.","Type: proceed"])); return; }
-    lockText("loading"); enqueue(async()=>{ await say(["","Acknowledged.","Loading evaluation module…",""]); await enterPhase2(); });
+    lockText("loading");
+    enqueue(async()=>{ await say(["","Acknowledged.","Loading evaluation module…",""]); await enterPhase2(); });
+    return;
+  }
+  if(state.phase===2.5){
+    if(v.toLowerCase()!=="continue"){ enqueue(()=>say(["","Command rejected.","Type: continue"])); return; }
+    lockText("loading");
+    enqueue(async()=>{ await say(["","Acknowledged.","Proceeding to trainee corps…",""]); await enterPhase3(); });
+    return;
   }
 });
 inp.addEventListener("keydown",e=>{ if(e.key==="Enter") send.click(); });
