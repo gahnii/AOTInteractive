@@ -66,6 +66,21 @@ input{flex:1;font:16px var(--mono);border:0;outline:0;background:transparent;col
 .tog{display:flex;gap:10px;align-items:center}
 .tog input{width:18px;height:18px}
 .note{opacity:.75;font-size:12px;line-height:1.5;margin-top:10px}
+
+/* ===== STATS MODAL ===== */
+.statsGrid{display:grid;gap:10px}
+.statRow{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 10px;border-radius:12px;border:1px solid rgba(0,0,0,.18);
+  background:rgba(255,255,255,.10)
+}
+.statRow .k{font-weight:900;text-transform:uppercase;letter-spacing:.4px;font-size:12px;opacity:.85}
+.statRow .v{font-weight:900}
+.statRow small{display:block;opacity:.7;font-weight:400;line-height:1.35;margin-top:4px}
+.badge{border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:4px 10px;font-size:12px;background:rgba(255,255,255,.12)}
+.badge.clean{border-color:rgba(0,0,0,.18)}
+.badge.updated{border-color:rgba(107,31,31,.38);background:rgba(107,31,31,.08)}
+.badge.flagged{border-color:rgba(107,31,31,.62);background:rgba(107,31,31,.12)}
+
 @media (prefers-reduced-motion:reduce){.caret{animation:none}.blood,.vignette,.bg,.blackout{transition:none}}
 </style></head><body>
 <div class="bg"></div>
@@ -80,6 +95,7 @@ input{flex:1;font:16px var(--mono);border:0;outline:0;background:transparent;col
   </div>
   <div style="display:flex;gap:10px;align-items:flex-start">
     <button class="settingsBtn" id="openSettings" title="Settings" aria-label="Settings">⚙</button>
+    <button class="settingsBtn" id="openStats" title="Stats" aria-label="Stats">☰</button>
     <div class="stamp">FILE: <b>#104-INTAKE</b><br>STATUS: <b id="status">RECORDING</b></div>
   </div>
 </header>
@@ -126,7 +142,7 @@ input{flex:1;font:16px var(--mono);border:0;outline:0;background:transparent;col
       </div>
 
       <div class="row2">
-        <div><div style="font-weight:900">save slot</div><small>single slot. autosaves on scene changes.</small></div>
+        <div><div style="font-weight:900">save slot</div><small>single slot. autosaves on milestones.</small></div>
         <div class="sel">
           <button class="chip" id="btnSave" type="button">save</button>
           <button class="chip" id="btnLoad" type="button">load</button>
@@ -138,8 +154,18 @@ input{flex:1;font:16px var(--mono);border:0;outline:0;background:transparent;col
   </div>
 </div>
 
+<div class="modal" id="statsModal" aria-hidden="true">
+  <div class="panel" role="dialog" aria-modal="true" aria-label="Stats">
+    <h2>
+      <span>Cadet Evaluation</span>
+      <button class="close" id="closeStats">close</button>
+    </h2>
+    <div class="statsGrid" id="statsGrid"></div>
+    <div class="note" id="statsNote"></div>
+  </div>
+</div>
+
 <script>
-/* helpers */
 const $=id=>document.getElementById(id),clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),wait=ms=>new Promise(r=>setTimeout(r,ms)),rand=(a,b)=>a+Math.random()*(b-a);
 const out=$("out"),hint=$("hint"),phaseNum=$("phaseNum"),statusEl=$("status");
 const boxText=$("boxText"),prompt=$("prompt"),mode=$("mode"),inp=$("inp"),send=$("send");
@@ -147,7 +173,10 @@ const boxChoice=$("boxChoice"),choiceTitle=$("choiceTitle"),choiceMode=$("choice
 const blood=$("blood"),vignette=$("vignette"),blackout=$("blackout");
 const boxStatus=$("boxStatus"),statusTitle=$("statusTitle"),statusPill=$("statusPill"),statusText=$("statusText");
 
-/* SKIP LOCK: keep disabled until you later set localStorage aot_unlocked_skip_v1="1" */
+const statsModal=$("statsModal"), openStatsBtn=$("openStats"), closeStatsBtn=$("closeStats");
+const statsGrid=$("statsGrid"), statsNote=$("statsNote");
+
+/* SKIP LOCK */
 const SKIP_UNLOCK_KEY="aot_unlocked_skip_v1";
 const SKIP_UNLOCKED=(localStorage.getItem(SKIP_UNLOCK_KEY)==="1");
 
@@ -257,26 +286,85 @@ function setSubbassIntensity(x,ms=200){
   subLP.Q.cancelScheduledValues(t); subLP.Q.setValueAtTime(subLP.Q.value,t); subLP.Q.linearRampToValueAtTime(qq,t+d);
 }
 
-/* simple BGM (HTMLAudio) */
-function mkLoop(src,vol=.6){const a=new Audio(src);a.loop=true;a.preload="auto";a.volume=0;return {a,target:vol,on:false}}
-function fade(loop,to=.6,ms=1400){
-  const A=loop.a,from=A.volume||0,steps=24,dt=ms/steps; let i=0;
-  const id=setInterval(()=>{i++;const p=i/steps;A.volume=from+(to-from)*p;if(i>=steps) clearInterval(id)},dt);
+/* simple BGM loops */
+function mkLoop(src, vol = .6){
+  const a = new Audio(src);
+  a.loop = true;
+  a.preload = "auto";
+  a.volume = 0;
+  return {
+    a,
+    target: vol,
+    on: false,
+    fadeTimer: null,
+    stopTimer: null
+  };
 }
-async function startLoop(loop,ms=1400){
+
+function fade(loop, to = .6, ms = 1400){
+  const A = loop.a;
+  const from = A.volume || 0;
+  const steps = 24, dt = ms / steps;
+  let i = 0;
+
+  if(loop.fadeTimer) clearInterval(loop.fadeTimer);
+  loop.fadeTimer = setInterval(() => {
+    i++;
+    const p = i / steps;
+    A.volume = from + (to - from) * p;
+    if(i >= steps){
+      clearInterval(loop.fadeTimer);
+      loop.fadeTimer = null;
+    }
+  }, dt);
+}
+
+async function startLoop(loop, ms = 1400){
   try{
-    if(!loop.on){loop.on=true;loop.a.volume=0;await loop.a.play()}
-    fade(loop,loop.target,ms);
-  }catch{}
+    // cancel any pending “pause” from a previous stopLoop
+    if(loop.stopTimer){ clearTimeout(loop.stopTimer); loop.stopTimer = null; }
+
+    if(!loop.on){
+      loop.on = true;
+      loop.a.volume = 0;
+      await loop.a.play();
+    }
+    fade(loop, loop.target, ms);
+  }catch{
+    // ignore autoplay failures
+  }
 }
-function stopLoop(loop,ms=900){
+
+function stopLoop(loop, ms = 900){
   if(!loop.on) return;
-  fade(loop,0,ms);
-  setTimeout(()=>{try{loop.a.pause()}catch{} loop.on=false;},ms+120);
+
+  // cancel fade so it doesn’t fight the fade-out
+  if(loop.fadeTimer){ clearInterval(loop.fadeTimer); loop.fadeTimer = null; }
+
+  fade(loop, 0, ms);
+
+  if(loop.stopTimer) clearTimeout(loop.stopTimer);
+  loop.stopTimer = setTimeout(() => {
+    try{ loop.a.pause(); }catch{}
+    loop.on = false;
+    loop.stopTimer = null;
+  }, ms + 120);
 }
-const daySong=mkLoop("dayambience.mp3",0.40);    // morning ambience (phase 3)
-const eveSong=mkLoop("armyG.mp3",0.52);          // evening training (phase 3)
-const nightSong=mkLoop("peaceful.mp3",0.55);     // lights out / cafeteria
+
+
+/* PHASE 3 DAY 1 (original) */
+const d1_morning=mkLoop("dayambience.mp3",0.40);
+const d1_evening=mkLoop("armyG.mp3",0.52);
+const d1_night  =mkLoop("peaceful.mp3",0.55);
+
+/* PHASE 3 DAY 2 (your new tracks ONLY) */
+const d2_morning=mkLoop("morning2.mp3",0.46);
+const d2_evening=mkLoop("evening2.mp3",0.52);
+const d2_night  =mkLoop("night2.mp3",0.55);
+
+function stopAllMusic(ms=900){
+  [d1_morning,d1_evening,d1_night,d2_morning,d2_evening,d2_night].forEach(x=>stopLoop(x,ms));
+}
 
 /* output */
 async function typeChars(str){
@@ -307,32 +395,50 @@ const clearScreen=()=>{lines=[];cur="";render()};
 const clearChoices=()=>choicesEl.innerHTML="";
 const setBlood=a=>blood.style.opacity=clamp(a,0,1),setVignette=a=>vignette.style.opacity=clamp(a,0,1);
 
-/* state */
+/* state (NO GLOBAL META STORAGE — fixed flawless persistence) */
 let started=0,locked=false,sceneId=null,q=Promise.resolve(),currentChoices=[];
 let state={
   phase:1,
   name:localStorage.getItem("aot_cadet_name")||"",
   fear:0,hesitation:0,obedience:0,initiative:0,injuries:0,dead:false,
-  flags:JSON.parse(localStorage.getItem("aot_flags_v1")||"{}"),
-  rel:JSON.parse(localStorage.getItem("aot_rel_v1")||"{}"),
-  path:JSON.parse(localStorage.getItem("aot_path_v1")||"{}"),
-  flawless:true
+  flags:{}, rel:{}, path:{},
+  flawless:true, flawlessWarn:0,
+  day:1
 };
-try{state.flawless=(localStorage.getItem("aot_flawless_v1")??"1")==="1"}catch{}
-const enqueue=fn=>(q=q.then(fn).catch(()=>{}));
-const saveMeta=()=>{localStorage.setItem("aot_flags_v1",JSON.stringify(state.flags||{}));localStorage.setItem("aot_rel_v1",JSON.stringify(state.rel||{}));localStorage.setItem("aot_path_v1",JSON.stringify(state.path||{}));localStorage.setItem("aot_flawless_v1",state.flawless?"1":"0")};
 const hasFlag=k=>!!(state.flags&&state.flags[k]);
-const setFlag=(k,v=true)=>{state.flags=state.flags||{};state.flags[k]=v;saveMeta()};
-const relAdd=(k,d)=>{state.rel=state.rel||{};state.rel[k]=(state.rel[k]||0)+d;saveMeta()};
-const setPath=(k,v)=>{state.path=state.path||{};state.path[k]=v;saveMeta()};
-const checkReq=req=>{
-  if(!req) return true;
-  if(req.flag && !hasFlag(req.flag)) return false;
-  if(req.nflag && hasFlag(req.nflag)) return false;
-  if(req.rel){const cur=(state.rel&&state.rel[req.rel.k])||0; if(cur < (req.rel.min??0)) return false;}
-  if(req.flawless && !state.flawless) return false;
-  return true;
-};
+const setFlag=(k,v=true)=>{state.flags=state.flags||{};state.flags[k]=v;};
+const relAdd=(k,d)=>{state.rel=state.rel||{};state.rel[k]=(state.rel[k]||0)+d;};
+const setPath=(k,v)=>{state.path=state.path||{};state.path[k]=v;};
+
+/* ===== STATS SYSTEM ===== */
+function fileStatus(){ if(!state.flawless) return "FLAGGED"; return (state.flawlessWarn>0) ? "UPDATED" : "CLEAN"; }
+function fileStatusDesc(){ const fs=fileStatus(); if(fs==="CLEAN") return "You're ideal."; if(fs==="UPDATED") return "Still flawless, but on the verge of losing it."; return "Flawless is broken."; }
+function badgeClass(fs){ return fs==="CLEAN"?"clean":fs==="UPDATED"?"updated":"flagged"; }
+function band(n){ n=clamp(n,0,9); if(n<=1) return "LOW"; if(n<=4) return "ELEVATED"; if(n<=7) return "HIGH"; return "CRITICAL"; }
+function renderStats(){
+  const fs=fileStatus();
+  const rows=[
+    {k:"FILE STATUS", v:fs, cls:`badge ${badgeClass(fs)}`, s:fileStatusDesc()},
+    {k:"FEAR", v:`${band(state.fear)} (${clamp(state.fear,0,9)})`, s:"Psychological stress, your mental state."},
+    {k:"HESITATION", v:`${band(state.hesitation)} (${clamp(state.hesitation,0,9)})`, s:"Cadet's response delay under pressure."},
+    {k:"OBEDIENCE", v:`${band(state.obedience)} (${clamp(state.obedience,0,9)})`, s:"Compliance with procedure."},
+    {k:"INITIATIVE", v:`${band(state.initiative)} (${clamp(state.initiative,0,9)})`, s:"Ability to act without instruction."},
+    {k:"INJURIES", v:`${clamp(state.injuries,0,9)}`, s:"Accumulated trauma markers."}
+  ];
+  statsGrid.innerHTML = rows.map(r=>`
+    <div class="statRow">
+      <div><div class="k">${r.k}</div><small>${r.s||""}</small></div>
+      <div class="${r.cls||""} v">${r.v}</div>
+    </div>
+  `).join("");
+  statsNote.textContent = (fs==="FLAGGED") ? "Record flagged for review." : "Record available. Changes are logged.";
+}
+function openStats(){ renderStats(); statsModal.classList.add("show"); statsModal.setAttribute("aria-hidden","false"); }
+function closeStats(){ statsModal.classList.remove("show"); statsModal.setAttribute("aria-hidden","true"); }
+openStatsBtn.onclick=()=>{ if(!started) return; openStats(); };
+closeStatsBtn.onclick=closeStats;
+statsModal.addEventListener("click",e=>{ if(e.target===statsModal) closeStats(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && statsModal.classList.contains("show")) closeStats(); });
 
 /* FX */
 function applyFx(fx){
@@ -343,7 +449,8 @@ function applyFx(fx){
   if(fx.unflag) setFlag(fx.unflag,false);
   if(fx.rel) relAdd(fx.rel.k,Number(fx.rel.d||0));
   if(fx.setPath) setPath(fx.setPath.k,fx.setPath.v);
-  if(fx.breakFlawless){state.flawless=false;saveMeta()}
+  if(fx.warnFlawless){ state.flawlessWarn = clamp((state.flawlessWarn|0) + Number(fx.warnFlawless||1), 0, 2); }
+  if(fx.breakFlawless){ state.flawless=false; state.flawlessWarn = 2; }
 }
 
 /* risk bed */
@@ -354,48 +461,97 @@ function setRisk(on){
 }
 
 /* transitions */
-async function fadeToNight(){
+async function fadeToNight(loopTag){
   const prevSpeed=settings.speed,prevSkip=settings.skip;
   forceNoSkip=true;skipReq=false;settings.speed=1;settings.skip=false;
   blackout.classList.add("on"); await wait(1150);
   document.body.classList.add("night");
-  await startLoop(nightSong,1600);
+  if(loopTag==="d1_night"){ stopAllMusic(250); await startLoop(d1_night,1600); }
+  if(loopTag==="d2_night"){ stopAllMusic(250); await startLoop(d2_night,1600); }
   blackout.classList.remove("on"); await wait(1150);
   settings.speed=prevSpeed;settings.skip=prevSkip;forceNoSkip=false;
 }
+async function fadeToDay(loopTag){
+  const prevSpeed=settings.speed,prevSkip=settings.skip;
+  forceNoSkip=true;skipReq=false;settings.speed=1;settings.skip=false;
+  blackout.classList.add("on"); await wait(1050);
+  document.body.classList.remove("night");
+  if(loopTag==="d1_day"){ stopAllMusic(250); await startLoop(d1_morning,1200); }
+  if(loopTag==="d2_day"){ stopAllMusic(250); await startLoop(d2_morning,1200); }
+  blackout.classList.remove("on"); await wait(1050);
+  settings.speed=prevSpeed;settings.skip=prevSkip;forceNoSkip=false;
+}
 
-/* SAVE SLOT (single) */
+/* ===== SAVE SLOT (single) + AUTOSAVE GATE ===== */
 const SAVEKEY="aot_save_v1";
+const MANUAL_LOCK_KEY="aot_manual_save_lock_v1";
+let lastAutoScene=null;
+
 function packSave(){
-  return {
-    v:1,
-    t:Date.now(),
-    sceneId,
-    lines,cur,
-    state:JSON.parse(JSON.stringify(state))
-  };
+  return { v:2, t:Date.now(), sceneId, lines,cur, state:JSON.parse(JSON.stringify(state)) };
+}
+function autosaveForce(){
+  if(!sceneId) return;
+  try{ localStorage.setItem(SAVEKEY,JSON.stringify(packSave())); }catch{}
 }
 function autosave(){
   if(!sceneId) return;
-  try{localStorage.setItem(SAVEKEY,JSON.stringify(packSave()))}catch{}
+  const lockedByManual = localStorage.getItem(MANUAL_LOCK_KEY)==="1";
+  if(lockedByManual){
+    if(sceneId!==lastAutoScene){ localStorage.removeItem(MANUAL_LOCK_KEY); }
+    else return;
+  }
+  const scene=SCENES[sceneId];
+  const major = !!scene?.end || sceneId==="field_entry" || sceneId==="p3_entry" || sceneId==="p3_night_cafeteria_intro" ||
+                sceneId==="p3_d2_entry" || sceneId==="p3_d2_evening_hub" || sceneId==="p3_d2_night_hub";
+  if(!major) return;
+  if(sceneId===lastAutoScene) return;
+  lastAutoScene=sceneId;
+  autosaveForce();
+}
+function loadFromSnapshot(s){
+  if(!s||!s.state) return false;
+  state=s.state; sceneId=s.sceneId;
+  lines=Array.isArray(s.lines)?s.lines:[]; cur=String(s.cur||"");
+  phaseNum.textContent=String(state.phase>=3?3:state.phase>=2?2:1);
+  render();
+  // restore day/night visual + correct music based on current scene bgm
+  if(sceneId && SCENES[sceneId]) applyBgm(SCENES[sceneId],true);
+  return true;
 }
 function loadSave(){
-  try{
-    const raw=localStorage.getItem(SAVEKEY); if(!raw) return false;
-    const s=JSON.parse(raw); if(!s||!s.state) return false;
-    state=s.state; sceneId=s.sceneId;
-    lines=Array.isArray(s.lines)?s.lines:[]; cur=String(s.cur||"");
-    // apply phase UI + music baseline
-    phaseNum.textContent=String(state.phase>=3?3:state.phase>=2?2:1);
-    if(state.phase>=3){ stopLoop(nightSong,200); document.body.classList.remove("night"); }
-    render();
-    return true;
-  }catch{return false}
+  try{ const raw=localStorage.getItem(SAVEKEY); if(!raw) return false; return loadFromSnapshot(JSON.parse(raw)); }
+  catch{return false}
 }
-function clearSave(){try{localStorage.removeItem(SAVEKEY)}catch{}}
-btnSave.onclick=()=>{autosave();settingsNote.textContent="saved to slot.";};
-btnLoad.onclick=()=>{if(loadSave()){settingsNote.textContent="loaded. resuming…"; closeSettings(); enqueue(()=>goto(sceneId||"field_entry"))}else settingsNote.textContent="no save found.";};
-btnClear.onclick=()=>{clearSave();settingsNote.textContent="save cleared.";};
+function clearSave(){
+  try{
+    localStorage.removeItem(SAVEKEY);
+    localStorage.removeItem(MANUAL_LOCK_KEY);
+    lastAutoScene=null;
+  }catch{}
+}
+btnSave.onclick=()=>{
+  autosaveForce();
+  lastAutoScene=sceneId;
+  localStorage.setItem(MANUAL_LOCK_KEY,"1");
+  settingsNote.textContent="saved to slot.";
+};
+btnLoad.onclick=()=>{ if(loadSave()){settingsNote.textContent="loaded. resuming…"; closeSettings(); enqueue(()=>goto(sceneId||"field_entry"))}else settingsNote.textContent="no save found."; };
+btnClear.onclick=()=>{
+  clearSave();
+  // reset run-only state too
+  state={
+    phase:1,
+    name:localStorage.getItem("aot_cadet_name")||"",
+    fear:0,hesitation:0,obedience:0,initiative:0,injuries:0,dead:false,
+    flags:{}, rel:{}, path:{},
+    flawless:true, flawlessWarn:0,
+    day:1
+  };
+  sceneId=null; lines=[]; cur=""; render();
+  setStatus("RECORDING");
+  settingsNote.textContent="save cleared.";
+};
 
 /* intro */
 const intro=[
@@ -409,7 +565,7 @@ const intro=[
 
 /* SCENES */
 const SCENES={
-/* ===== PHASE 2 ===== */
+/* ===== PHASE 2 (kept) ===== */
 field_entry:{text:s=>[
   W("Phase 2. Field Evaluation."),
   W(`Cadet ${s.name||"—"}. You will move when told.`),
@@ -417,7 +573,7 @@ field_entry:{text:s=>[
   "A single Titan target moves between ruined frames. It has not seen you."
 ],title:"choose",choices:[
   {k:"A",label:"stay low. approach from debris.",fx:{obedience:+1},next:"approach_debris"},
-  {k:"B",label:"sprint straight to close distance.",fx:{initiative:+1,hesitation:+1},next:"sprint_open"},
+  {k:"B",label:"sprint straight to close distance.",fx:{initiative:+1,hesitation:+1,warnFlawless:1},next:"sprint_open"},
   {k:"C",label:"wait. observe its pattern.",fx:{hesitation:+1},next:"observe"}
 ]},
 observe:{text:()=>[
@@ -425,7 +581,7 @@ observe:{text:()=>[
   "Your legs tense. The window closes.",W("Decision. Now.")
 ],title:"choose",choices:[
   {k:"1",label:"approach from debris.",fx:{obedience:+1},next:"approach_debris"},
-  {k:"2",label:"sprint in.",fx:{initiative:+1,hesitation:+1},next:"sprint_open"},
+  {k:"2",label:"sprint in.",fx:{initiative:+1,hesitation:+1,warnFlawless:1},next:"sprint_open"},
   {k:"3",label:"withdraw.",fx:{hesitation:+2,breakFlawless:true},next:"end_withdrawn"}
 ]},
 approach_debris:{text:()=>[
@@ -435,13 +591,13 @@ approach_debris:{text:()=>[
 ],title:"one action",choices:[
   {k:"1",label:"aim for the eyes.",fx:{initiative:+1},next:"eyes_attempt"},
   {k:"2",label:"cut the achilles.",fx:{obedience:+1},next:"ankle_attempt"},
-  {k:"3",label:"back off. reposition.",fx:{hesitation:+1,breakFlawless:true},next:"reposition"}
+  {k:"3",label:"back off. reposition.",fx:{hesitation:+1,warnFlawless:1},next:"reposition"}
 ]},
 sprint_open:{text:()=>[
   W("Loud."),"You break into a sprint.","The Titan’s head snaps toward you.","It sees you.","Your stomach drops."
 ],title:"react",choices:[
   {k:"1",label:"zigzag toward its blind spot.",fx:{initiative:+1},next:"blindspot"},
-  {k:"2",label:"keep charging. commit.",fx:{initiative:+2,fear:+1},next:"commit_charge"},
+  {k:"2",label:"keep charging. commit.",fx:{initiative:+2,fear:+1,warnFlawless:1},next:"commit_charge"},
   {k:"3",label:"abort. dive behind rubble.",fx:{obedience:+1,hesitation:+1,breakFlawless:true},next:"dive_cover"}
 ]},
 eyes_attempt:{text:()=>[
@@ -460,7 +616,7 @@ eyes_strike:{text:()=>[
 ankle_attempt:{text:()=>[
   "You drop low.","You cut. Deep.","The Titan stumbles. Not down."
 ],title:"follow-up",choices:[
-  {k:"1",label:"get out now.",fx:{obedience:+1,breakFlawless:true},next:"end_messy"},
+  {k:"1",label:"get out now.",fx:{obedience:+1,warnFlawless:1},next:"end_messy"},
   {k:"2",label:"stay. keep cutting.",fx:{initiative:+1,fear:+1,breakFlawless:true},next:"death_slow"}
 ]},
 reposition:{text:()=>[
@@ -484,7 +640,7 @@ commit_charge:{text:()=>[
 dive_cover:{text:()=>[
   "You dive behind rubble.","Dust fills your mouth.","The Titan’s fingers scrape stone.","It didn’t get you."
 ],title:"next",choices:[
-  {k:"1",label:"crawl away. reset.",fx:{obedience:+1,breakFlawless:true},next:"approach_debris"},
+  {k:"1",label:"crawl away. reset.",fx:{obedience:+1,warnFlawless:1},next:"approach_debris"},
   {k:"2",label:"run again.",fx:{hesitation:+1,fear:+1,breakFlawless:true},next:"sprint_open"}
 ]},
 death_slow:{death:true,ramp:[0,.10,.18,.28,.42,.58,.72,.86,1],sub:"Hesitation will get you nowhere.",
@@ -496,7 +652,8 @@ text:()=>[
   "Your voice tears out.","It turns into a sound you don’t recognize.","",
   "The field tilts.. and the sky smears sideways.","Your vision tunnels. Your ears start ringing.","",
   "You kick, you squirm.. but it doesn't let go.","You yell to your instructor.. but no one hears.","",
-  "A calm second passes—","like the world is waiting for you to stop.","",
+  "A calm second passes—",
+  "like the world is waiting for you to stop.","",
   "Then.. silence.","",PICK("STATUS: DECEASED.")
 ]},
 death_gamble:{death:true,ramp:[0,.10,.18,.28,.42,.58,.72,.86,1],sub:"Gamble noted. Outcome: predictable.",
@@ -512,18 +669,18 @@ end_overcommit:{end:true,text:()=>["You stay in.","The Titan flails blind.","A n
 end_messy:{end:true,text:()=>["You disengage.","Your hands keep shaking after you stop.",W("You lived. That’s not the same as succeeding."),W("Evaluation logged: PASS (CONDITIONAL)."),"",PICK("End of Phase 2.")]},
 end_withdrawn:{end:true,text:()=>["You withdraw.","The bell tower fades behind you.",W("Withdrawal is also a decision."),W("Evaluation logged: FAIL."),"",PICK("End of Phase 2.")]},
 
-/* ===== PHASE 3 ===== */
-p3_entry:{bgm:"day",text:s=>[
+/* ===== PHASE 3 DAY 1 ===== */
+p3_entry:{bgm:"d1_day",text:s=>[
   W("Phase 3. Trainee Corps."),"",
   "A barracks corridor. Boots on wood. Low lantern light.",
   "For the first time since intake, voices overlap. Low. Human.",
   W("You will integrate. You will be observed.")
 ],title:"you say",choices:[
   {k:"A",label:"\"…Hey.\"",fx:{obedience:+1,rel:{k:"mira",d:+1},flag:"p3_arrived"},next:"p3_morning_hub"},
-  {k:"B",label:`"Name’s ${state.name||"cadet"}. Just transferred."`,fx:{initiative:+1,rel:{k:"nat",d:-1},breakFlawless:true,flag:"p3_brag"},next:"p3_morning_hub"},
-  {k:"C",label:"Say nothing.",fx:{hesitation:+1,flag:"silent"},next:"p3_morning_hub"}
+  {k:"B",label:`"Name’s ${state.name||"cadet"}. Just transferred."`,fx:{initiative:+1,rel:{k:"nat",d:-1},warnFlawless:1,flag:"p3_brag"},next:"p3_morning_hub"},
+  {k:"C",label:"Say nothing.",fx:{hesitation:+1,warnFlawless:1,flag:"silent"},next:"p3_morning_hub"}
 ]},
-p3_morning_hub:{bgm:"day",text:()=>[
+p3_morning_hub:{bgm:"d1_day",text:()=>[
   "Steve keeps talking to fill the air.","Mira watches like she’s deciding if you’re safe.","Nat watches like he’s deciding if you’re worth time.","",
   "Somewhere down the hall, someone drops a bucket.","The sound echoes too long.","",W("Training in one hour.")
 ],title:"before training",choices:[
@@ -533,75 +690,74 @@ p3_morning_hub:{bgm:"day",text:()=>[
   {k:"D",label:"Prepare quietly.",fx:{obedience:+1,flag:"quiet_morning"},next:"p3_morning_prepare"},
   {k:"E",label:"Head to the training yard.",fx:{},next:"p3_afternoon_entry"}
 ]},
-p3_morning_prepare:{bgm:"day",text:()=>[
+p3_morning_prepare:{bgm:"d1_day",text:()=>[
   "You check straps. You check buckles.","You check them again.","",
   "Your hands move like they’re trying to outrun your thoughts.","",
   "Someone nearby is laughing too loudly.","Someone else is silent like stone."
 ],title:"you decide",choices:[
   {k:"1",label:"Go back. Talk to someone.",fx:{},next:"p3_morning_hub"},
-  {k:"2",label:"Stay quiet. Keep preparing.",fx:{flag:"prepared_alone"},next:"p3_morning_prepare_2"},
+  {k:"2",label:"Stay quiet. Keep preparing.",fx:{flag:"prepared_alone",warnFlawless:1},next:"p3_morning_prepare_2"},
   {k:"3",label:"Head out early to the yard.",fx:{obedience:+1},next:"p3_afternoon_entry"}
 ]},
-p3_morning_prepare_2:{bgm:"day",text:()=>[
+p3_morning_prepare_2:{bgm:"d1_day",text:()=>[
   "The quiet starts to press on your ears.","Like a hand covering your mouth.","",
   "You catch your reflection in a dark window.","You look… smaller than you expected."
 ],title:"you do",choices:[
   {k:"A",label:"Shake it off. Rejoin the room.",fx:{},next:"p3_morning_hub"},
-  {k:"B",label:"Hold onto the quiet. Let it harden.",fx:{flag:"hardened",breakFlawless:true},next:"p3_morning_hub"},
+  {k:"B",label:"Hold onto the quiet. Let it harden.",fx:{flag:"hardened",warnFlawless:1},next:"p3_morning_hub"},
   {k:"C",label:"Go to training.",fx:{},next:"p3_afternoon_entry"}
 ]},
 
-/* Mira */
-p3_mira_talk:{bgm:"day",text:()=>[
+/* Mira / Steve / Nat (day 1) unchanged-ish but compacted for space */
+p3_mira_talk:{bgm:"d1_day",text:()=>[
   "Mira doesn’t move much when you come closer.","But she makes space anyway.","",
   N("Mira","First day always feels wrong."),
   N("Mira","Like you’re wearing someone else’s life."),
   "","She glances toward Nat, then away."
 ],title:"you reply",choices:[
   {k:"1",label:"\"Yeah… it feels fake.\"",fx:{rel:{k:"mira",d:+2},flag:"mira_anchor",setPath:{k:"mira",v:"anchor"}},next:"p3_mira_follow"},
-  {k:"2",label:"\"I’m fine.\"",fx:{rel:{k:"mira",d:-1},breakFlawless:true,flag:"mira_shutout",setPath:{k:"mira",v:"avoid"}},next:"p3_mira_follow"},
+  {k:"2",label:"\"I’m fine.\"",fx:{rel:{k:"mira",d:-1},warnFlawless:1,flag:"mira_shutout",setPath:{k:"mira",v:"avoid"}},next:"p3_mira_follow"},
   {k:"3",label:"\"How do you deal with people like Nat?\"",fx:{rel:{k:"mira",d:+1},flag:"asked_nat"},next:"p3_mira_nat"}
 ]},
-p3_mira_nat:{bgm:"day",text:()=>[
+p3_mira_nat:{bgm:"d1_day",text:()=>[
   N("Mira","Nat makes everything a contest."),
   N("Mira","If you let him pick what matters, you lose before you start."),
   "","She says it gently, like she’s trying not to wake something up."
 ],title:"you say",choices:[
   {k:"1",label:"\"So what matters?\"",fx:{rel:{k:"mira",d:+1}},next:"p3_mira_follow"},
-  {k:"2",label:"\"I want him to stop.\"",fx:{breakFlawless:true,flag:"nat_fixation"},next:"p3_mira_follow"},
+  {k:"2",label:"\"I want him to stop.\"",fx:{warnFlawless:1,flag:"nat_fixation"},next:"p3_mira_follow"},
   {k:"3",label:"\"Noted.\"",fx:{obedience:+1},next:"p3_mira_follow"}
 ]},
-p3_mira_follow:{bgm:"day",text:()=>[
+p3_mira_follow:{bgm:"d1_day",text:()=>[
   "Mira watches your face for a second.","Like she’s checking for cracks.","",
   N("Mira","If it gets loud in your head…"),N("Mira","Find me. Okay?"),"",
   "It’s not pity.","It’s a rope."
 ],title:"you answer",choices:[
   {k:"A",label:"\"Okay.\"",fx:{rel:{k:"mira",d:+2},flag:"mira_rope"},next:"p3_morning_hub"},
-  {k:"B",label:"\"Don’t do that.\" (push her away)",fx:{rel:{k:"mira",d:-2},breakFlawless:true,flag:"pushed_mira",setPath:{k:"mira",v:"avoid"}},next:"p3_morning_hub"},
+  {k:"B",label:"\"Don’t do that.\" (push her away)",fx:{rel:{k:"mira",d:-2},warnFlawless:1,flag:"pushed_mira",setPath:{k:"mira",v:"avoid"}},next:"p3_morning_hub"},
   {k:"C",label:"\"Thanks.\" (quiet)",fx:{rel:{k:"mira",d:+1}},next:"p3_morning_hub"}
 ]},
-
-/* Steve */
-p3_steve_talk:{bgm:"day",text:()=>[
+p3_steve_talk:{bgm:"d1_day",text:()=>[
   "Steve leans like he’s been standing too long.","",
   N("Steve","Official welcome gift: a secret."),
   N("Steve","The stew is always worse on Mondays."),
   "","He waits for your reaction like it matters."
 ],title:"you reply",choices:[
   {k:"1",label:"\"That’s your secret?\"",fx:{rel:{k:"steve",d:+2},flag:"steve_friend",setPath:{k:"steve",v:"friend"}},next:"p3_steve_follow"},
-  {k:"2",label:"\"Not now.\"",fx:{rel:{k:"steve",d:-1},breakFlawless:true,setPath:{k:"steve",v:"annoyed"}},next:"p3_steve_follow"},
+  {k:"2",label:"\"Not now.\"",fx:{rel:{k:"steve",d:-1},warnFlawless:1,setPath:{k:"steve",v:"annoyed"}},next:"p3_steve_follow"},
   {k:"3",label:"\"Tell me something real.\"",fx:{rel:{k:"steve",d:+1},flag:"steve_real"},next:"p3_steve_real"}
 ]},
-p3_steve_real:{bgm:"day",text:()=>[
+p3_steve_real:{bgm:"d1_day",text:()=>[
   "Steve blinks like you hit him lightly.","",
-  N("Steve","…Real?"),N("Steve","Real is I don’t sleep much."),N("Steve","Real is I keep joking so nobody asks why."),"",
+  N("Steve","…Real?"),N("Steve","Real is I don’t sleep much."),
+  N("Steve","Real is I keep joking so nobody asks why."),"",
   "His smile tries to come back and fails halfway."
 ],title:"you respond",choices:[
   {k:"A",label:"\"You don’t have to perform.\"",fx:{rel:{k:"steve",d:+2},flag:"steve_seen"},next:"p3_steve_follow"},
   {k:"B",label:"\"Same.\"",fx:{rel:{k:"steve",d:+1}},next:"p3_steve_follow"},
-  {k:"C",label:"Say nothing.",fx:{flag:"steve_left_hanging",breakFlawless:true},next:"p3_steve_follow"}
+  {k:"C",label:"Say nothing.",fx:{flag:"steve_left_hanging",warnFlawless:1},next:"p3_steve_follow"}
 ]},
-p3_steve_follow:{bgm:"day",text:()=>[
+p3_steve_follow:{bgm:"d1_day",text:()=>[
   "Steve clears his throat.","",
   N("Steve","Okay. Then I’ll be normal for ten seconds."),
   N("Steve","…You’re not alone here. Even if it feels like it."),"",
@@ -611,38 +767,36 @@ p3_steve_follow:{bgm:"day",text:()=>[
   {k:"B",label:"\"Don’t go soft on me.\"",fx:{rel:{k:"steve",d:+1}},next:"p3_morning_hub"},
   {k:"C",label:"\"You’re weird.\"",fx:{rel:{k:"steve",d:+2}},next:"p3_morning_hub"}
 ]},
-
-/* Nat */
-p3_nat_talk:{bgm:"day",text:()=>[
+p3_nat_talk:{bgm:"d1_day",text:()=>[
   "Nat doesn’t smile when you approach.","He looks you over like equipment.","",
   N("Nat","You freeze under pressure."),N("Nat","Or you pretend you don’t."),
   N("Nat","Either way, you slow the line."),"","Steve stops talking.","Mira goes still."
 ],title:"you respond",choices:[
-  {k:"1",label:"\"What do you want from me?\"",fx:{rel:{k:"nat",d:-2},flag:"nat_enemy",setPath:{k:"nat",v:"rival"},breakFlawless:true},next:"p3_nat_follow"},
+  {k:"1",label:"\"What do you want from me?\"",fx:{rel:{k:"nat",d:-2},flag:"nat_enemy",setPath:{k:"nat",v:"rival"},warnFlawless:1},next:"p3_nat_follow"},
   {k:"2",label:"\"Noted. I’ll fix it.\"",fx:{rel:{k:"nat",d:+1},flag:"nat_respect",setPath:{k:"nat",v:"respect"}},next:"p3_nat_follow"},
   {k:"3",label:"Say nothing. Hold eye contact.",fx:{flag:"nat_stared",setPath:{k:"nat",v:"owed"}},next:"p3_nat_follow"}
 ]},
-p3_nat_follow:{bgm:"day",text:()=>[
+p3_nat_follow:{bgm:"d1_day",text:()=>[
   "Nat steps closer, just enough to make it personal.","",
   N("Nat","Everybody wants to be carried."),N("Nat","Don’t make me carry you."),"",
-  "He turns away like the conversation is already over.","And somehow that makes your chest feel hot."
+  "He turns away like the conversation is already over."
 ],title:"you do",choices:[
-  {k:"A",label:"Let it go. Don’t feed it.",fx:{flag:"nat_ignored"},next:"p3_morning_hub"},
-  {k:"B",label:"Memorize his tone. Keep it.",fx:{flag:"nat_fixated",breakFlawless:true,setPath:{k:"nat",v:"rival"}},next:"p3_morning_hub"},
-  {k:"C",label:"Say one thing—quiet, sharp.",fx:{flag:"nat_poked",breakFlawless:true,rel:{k:"nat",d:-1},setPath:{k:"nat",v:"rival"}},next:"p3_nat_snap"}
+  {k:"A",label:"Let it go.",fx:{flag:"nat_ignored"},next:"p3_morning_hub"},
+  {k:"B",label:"Memorize his tone.",fx:{flag:"nat_fixated",warnFlawless:1,setPath:{k:"nat",v:"rival"}},next:"p3_morning_hub"},
+  {k:"C",label:"Say one thing—quiet, sharp.",fx:{flag:"nat_poked",warnFlawless:1,rel:{k:"nat",d:-1},setPath:{k:"nat",v:"rival"}},next:"p3_nat_snap"}
 ]},
-p3_nat_snap:{bgm:"day",text:()=>[
+p3_nat_snap:{bgm:"d1_day",text:()=>[
   N("Nat","…What did you say?"),
   "He doesn’t raise his voice.","That’s the problem.","",
   "People nearby pretend they didn’t hear.","But they absolutely did."
 ],title:"you answer",choices:[
   {k:"1",label:"\"Nothing.\"",fx:{flag:"nat_backed"},next:"p3_morning_hub"},
-  {k:"2",label:"\"I said I heard you.\"",fx:{flag:"nat_confirmed",breakFlawless:true,rel:{k:"nat",d:-2}},next:"p3_morning_hub"},
+  {k:"2",label:"\"I said I heard you.\"",fx:{flag:"nat_confirmed",warnFlawless:1,rel:{k:"nat",d:-2}},next:"p3_morning_hub"},
   {k:"3",label:"\"I said don’t talk to me like that.\"",fx:{flag:"nat_defied",breakFlawless:true,rel:{k:"nat",d:-3}},next:"p3_morning_hub"}
 ]},
 
-/* training hub */
-p3_afternoon_entry:{bgm:"eve",text:()=>[
+/* training (day 1 evening music) */
+p3_afternoon_entry:{bgm:"d1_eve",text:()=>[
   W("Trainee schedule: movement drills. balance. impact control."),
   W("You will rotate stations."),
   "","The yard is packed.","Ropes. beams. wooden dummies. chalk lines.","Every mistake is loud."
@@ -653,261 +807,616 @@ p3_afternoon_entry:{bgm:"eve",text:()=>[
   {k:"D",label:"Assist Mira (strap check).",fx:{flag:"helped_mira",rel:{k:"mira",d:+1}},next:"p3_station_mira"},
   {k:"E",label:"Cool down / observe.",fx:{hesitation:+1,breakFlawless:true,flag:"observed_only"},next:"p3_observe_cooldown"}
 ]},
-p3_station_balance:{bgm:"eve",text:()=>[
+p3_station_balance:{bgm:"d1_eve",text:()=>[
   "A narrow beam. Chalk dust. Wind.","Your feet learn the line.","",W("Again."),W("Cleaner.")
 ],title:"after",choices:[
-  {k:"1",label:"Push for perfect. Do extra runs.",fx:{initiative:+1,flag:"grit"},next:"p3_balance_extra"},
+  {k:"1",label:"Push for perfect.",fx:{initiative:+1,flag:"grit"},next:"p3_evening_wrap"},
   {k:"2",label:"Stop when told.",fx:{obedience:+1},next:"p3_evening_wrap"},
-  {k:"3",label:"Slip once. Laugh it off.",fx:{breakFlawless:true,flag:"slipped"},next:"p3_balance_slip"}
+  {k:"3",label:"Slip once. Laugh it off.",fx:{warnFlawless:1,flag:"slipped"},next:"p3_evening_wrap"}
 ]},
-p3_balance_extra:{bgm:"eve",text:()=>[
-  "You stay on the beam after the others step down.","Your calves burn. The wind keeps testing you.","",
-  "From the edge of the yard, Instructor Enzo watches without expression.","",
-  "You don’t look away.","You don’t let your ankles shake mean anything."
-],title:"after",choices:[
-  {k:"A",label:"Step down when you’re steady.",fx:{obedience:+1,flag:"balance_control"},next:"p3_evening_wrap"},
-  {k:"B",label:"Do one more run. Quietly.",fx:{initiative:+1,flag:"balance_one_more",breakFlawless:true},next:"p3_evening_wrap"}
-]},
-p3_balance_slip:{bgm:"eve",text:()=>[
-  "Your foot slides.","For a second, your stomach floats.","",
-  "You catch yourself hard and laugh like it was on purpose.","",
-  "Someone nearby laughs too—relieved more than amused.","Nat doesn’t.","","You climb back up anyway."
-],title:"you do",choices:[
-  {k:"A",label:"Run it again. No smile this time.",fx:{initiative:+1,flag:"balance_recovered"},next:"p3_evening_wrap"},
-  {k:"B",label:"Step down. Save your legs.",fx:{obedience:+1},next:"p3_evening_wrap"}
-]},
-p3_station_dummies:{bgm:"eve",text:()=>[
+p3_station_dummies:{bgm:"d1_eve",text:()=>[
   "Wooden dummies stare like they understand you.","Your strikes thud. Too hard. Too soft.","",
   W("Control is mercy."),W("Mercy is speed.")
 ],title:"you adjust",choices:[
-  {k:"1",label:"Slow down. Clean technique.",fx:{obedience:+1},next:"p3_dummies_clean"},
-  {k:"2",label:"Hit harder. Prove a point.",fx:{breakFlawless:true,flag:"overhit",rel:{k:"nat",d:+1}},next:"p3_dummies_overhit"},
-  {k:"3",label:"Ask Steve to spot you.",fx:{rel:{k:"steve",d:+1},flag:"steve_spot"},next:"p3_dummies_steve_spot"}
+  {k:"1",label:"Slow down. Clean technique.",fx:{obedience:+1},next:"p3_evening_wrap"},
+  {k:"2",label:"Hit harder. Prove a point.",fx:{warnFlawless:1,flag:"overhit",rel:{k:"nat",d:+1}},next:"p3_evening_wrap"},
+  {k:"3",label:"Ask Steve to spot you.",fx:{rel:{k:"steve",d:+1},flag:"steve_spot"},next:"p3_evening_wrap"}
 ]},
-p3_dummies_clean:{bgm:"eve",text:()=>[
-  "You slow down.","Hands steady.","Breath measured.","",
-  "The blade lands cleaner.","Quieter.","","For once, it feels like control."
-],title:"after",choices:[
-  {k:"A",label:"End on that. Step back.",fx:{obedience:+1,flag:"clean_control"},next:"p3_evening_wrap"},
-  {k:"B",label:"One more clean hit.",fx:{initiative:+1,flag:"extra_rep"},next:"p3_evening_wrap"}
-]},
-p3_dummies_overhit:{bgm:"eve",text:()=>[
-  "You hit harder.","The dummy rattles.","",
-  "The sound pulls eyes your way.","Nat’s included.","",
-  "It doesn’t feel like strength.","It feels like noise."
-],title:"after",choices:[
-  {k:"A",label:"Dial it back. Save face.",fx:{obedience:+1},next:"p3_evening_wrap"},
-  {k:"B",label:"Keep going. Prove it.",fx:{breakFlawless:true,flag:"kept_overhitting"},next:"p3_evening_wrap"}
-]},
-p3_dummies_steve_spot:{bgm:"eve",text:()=>[
-  "Steve steps behind you and squints like he’s a real instructor.","",
-  N("Steve","Okay. Again. Same speed."),
-  N("Steve","But this time— don’t swing angry."),"",
-  "You strike.","The blade lands cleaner. Quieter.","",
-  "Steve nods once, like it matters.",
-  N("Steve","There. That’s you. Not the noise in your chest.")
-],title:"after",choices:[
-  {k:"A",label:"\"Thanks.\" (breathe)",fx:{rel:{k:"steve",d:+1},flag:"steve_coached"},next:"p3_evening_wrap"},
-  {k:"B",label:"Go again. One more clean hit.",fx:{initiative:+1,flag:"extra_rep"},next:"p3_evening_wrap"}
-]},
-p3_station_mira:{bgm:"eve",text:()=>[
+p3_station_mira:{bgm:"d1_eve",text:()=>[
   "Mira’s strap is twisted. She’s trying not to panic about it.","",
   N("Mira","Sorry. It’s stupid."),"It isn’t.","","You fix it with steady hands."
 ],title:"you say",choices:[
-  {k:"A",label:"\"Not stupid. We’ve got time.\"",fx:{rel:{k:"mira",d:+2},flag:"mira_trust"},next:"p3_mira_strap_kind"},
-  {k:"B",label:"\"Just check it next time.\"",fx:{breakFlawless:true,rel:{k:"mira",d:-1}},next:"p3_mira_strap_blunt"},
-  {k:"C",label:"\"Don’t thank me.\" (too sharp)",fx:{breakFlawless:true,flag:"pushed_mira"},next:"p3_mira_strap_sharp"}
+  {k:"A",label:"\"Not stupid. We’ve got time.\"",fx:{rel:{k:"mira",d:+2},flag:"mira_trust"},next:"p3_evening_wrap"},
+  {k:"B",label:"\"Just check it next time.\"",fx:{warnFlawless:1,rel:{k:"mira",d:-1}},next:"p3_evening_wrap"},
+  {k:"C",label:"\"Don’t thank me.\" (too sharp)",fx:{warnFlawless:1,flag:"pushed_mira"},next:"p3_evening_wrap"}
 ]},
-p3_mira_strap_kind:{bgm:"eve",text:()=>[
-  "Mira exhales like she’d been holding it for minutes.","",N("Mira","Thank you."),"",
-  "She doesn’t say it like a habit.","She says it like she’s choosing to trust you."
-],title:"you reply",choices:[
-  {k:"A",label:"\"Anytime.\" (mean it)",fx:{rel:{k:"mira",d:+1},flag:"mira_soft"},next:"p3_evening_wrap"},
-  {k:"B",label:"Nod. Keep it simple.",fx:{flag:"mira_simple"},next:"p3_evening_wrap"}
-]},
-p3_mira_strap_blunt:{bgm:"eve",text:()=>[
-  "Mira’s face tightens for half a second.","",N("Mira","…Yeah. I know."),"",
-  "She looks down at the strap like it betrayed her.","Then she straightens her shoulders anyway."
-],title:"you do",choices:[
-  {k:"A",label:"\"Sorry.\" (soften it)",fx:{rel:{k:"mira",d:+1},flag:"mira_repair"},next:"p3_evening_wrap"},
-  {k:"B",label:"Let it sit. Move on.",fx:{flag:"mira_distance",breakFlawless:true},next:"p3_evening_wrap"}
-]},
-p3_mira_strap_sharp:{bgm:"eve",text:()=>[
-  "The words leave your mouth too fast.","",
-  "Mira blinks once—like she’s been tapped.",N("Mira","…Okay."),"",
-  "She turns away so you don’t see what it does to her face.","You feel it anyway."
-],title:"you decide",choices:[
-  {k:"A",label:"\"Hey— I didn’t mean it like that.\"",fx:{rel:{k:"mira",d:+1},flag:"mira_apology"},next:"p3_evening_wrap"},
-  {k:"B",label:"Say nothing. Let the distance form.",fx:{breakFlawless:true,flag:"mira_wall"},next:"p3_evening_wrap"}
-]},
-p3_station_nat:{bgm:"eve",text:()=>[
+p3_station_nat:{bgm:"d1_eve",text:()=>[
   "Nat’s assigned as your partner.","He doesn’t greet you.","",
   N("Nat","Footwork."),N("Nat","If you trip, don’t blame the ground."),"",
   "You circle. You feint. He counters fast."
 ],title:"you choose",choices:[
-  {k:"1",label:"Stay composed. Copy his timing.",fx:{initiative:+1,rel:{k:"nat",d:+1},flag:"did_well_vs_nat"},next:"p3_nat_footwork_composed"},
-  {k:"2",label:"Go aggressive. Force contact.",fx:{breakFlawless:true,rel:{k:"nat",d:-1},flag:"overaggressive"},next:"p3_nat_footwork_aggressive"},
-  {k:"3",label:"Back off. Let it end.",fx:{breakFlawless:true,rel:{k:"nat",d:-2},flag:"folded"},next:"p3_nat_footwork_fold"}
+  {k:"1",label:"Stay composed. Copy his timing.",fx:{initiative:+1,rel:{k:"nat",d:+1},flag:"did_well_vs_nat"},next:"p3_evening_wrap"},
+  {k:"2",label:"Go aggressive. Force contact.",fx:{warnFlawless:1,rel:{k:"nat",d:-1},flag:"overaggressive"},next:"p3_evening_wrap"},
+  {k:"3",label:"Back off. Let it end.",fx:{warnFlawless:1,rel:{k:"nat",d:-2},flag:"folded"},next:"p3_evening_wrap"}
 ]},
-p3_nat_footwork_composed:{bgm:"eve",text:()=>[
-  "You stop trying to win and start trying to read him.","His timing isn’t random. It’s cruelly consistent.","",
-  "You match it once.","","Nat’s eyes flick up—quick.",N("Nat","…Better."),"",
-  "It’s the closest thing to praise you’ve heard from him."
-],title:"after",choices:[
-  {k:"A",label:"Hold that rhythm. Don’t chase.",fx:{initiative:+1,flag:"nat_rhythm"},next:"p3_evening_wrap"},
-  {k:"B",label:"End it clean. No extra hits.",fx:{obedience:+1},next:"p3_evening_wrap"}
-]},
-p3_nat_footwork_aggressive:{bgm:"eve",text:()=>[
-  "You push into his space.","Force contact. Force an answer.","",
-  "Nat lets you in—then turns you.","Your boot catches. Your shoulder hits dirt.","",
-  "He offers a hand like it’s an insult.",N("Nat","That’s what happens when you swing with your ego.")
-],title:"you react",choices:[
-  {k:"A",label:"Take the hand. Stand up.",fx:{obedience:+1,flag:"nat_swallowed"},next:"p3_evening_wrap"},
-  {k:"B",label:"Stand up without him.",fx:{breakFlawless:true,flag:"nat_refused",rel:{k:"nat",d:-1}},next:"p3_evening_wrap"}
-]},
-p3_nat_footwork_fold:{bgm:"eve",text:()=>[
-  "You keep your distance.","Let the station end itself.","",
-  "Nat notices.","Of course he does.","",
-  N("Nat","If you’re afraid of getting hit, you’re already hit."),"",
-  "Your face stays blank.","Your stomach doesn’t."
-],title:"you do",choices:[
-  {k:"A",label:"Try once. Step in—clean.",fx:{initiative:+1,flag:"nat_attempted"},next:"p3_evening_wrap"},
-  {k:"B",label:"Stay back. Survive the minute.",fx:{breakFlawless:true,flag:"nat_survived"},next:"p3_evening_wrap"}
-]},
-p3_observe_cooldown:{bgm:"eve",text:()=>[
+p3_observe_cooldown:{bgm:"d1_eve",text:()=>[
   "You step off to the edge of the yard.","Stretch your fingers. Roll your shoulders.","",
   "You watch other cadets fail in small ways.","A strap slips. A blade angle is wrong. A landing is too loud.","",
   "It hits you: everyone here is scared.","Some people just wear it differently."
 ],title:"you decide",choices:[
-  {k:"A",label:"Go back in. Pick a station.",fx:{initiative:+1,flag:"returned"},next:"p3_afternoon_entry"},
-  {k:"B",label:"Stay out a little longer.",fx:{hesitation:+1,breakFlawless:true,flag:"lingered"},next:"p3_evening_wrap"}
+  {k:"A",label:"Go back in.",fx:{initiative:+1,flag:"returned"},next:"p3_afternoon_entry"},
+  {k:"B",label:"Stay out longer.",fx:{hesitation:+1,breakFlawless:true,flag:"lingered"},next:"p3_evening_wrap"}
 ]},
-
-/* after training: fade out armyG, then lights out choice triggers night transition cleanly */
-p3_evening_wrap:{bgm:"eve",text:()=>[
+p3_evening_wrap:{bgm:"d1_eve",text:()=>[
   "The sun dips behind wall stone.","People keep moving like they’re afraid to stop.","",
   W("Enough."),W("Return. Lights out soon.")
 ],title:"after training",choices:[
   {k:"A",label:"Go back with the group.",fx:{flag:"went_with_group"},next:"p3_lights_out"},
-  {k:"B",label:"Hang back. Walk alone.",fx:{breakFlawless:true,flag:"alone_walk"},next:"p3_lights_out_alone"}
+  {k:"B",label:"Hang back. Walk alone.",fx:{breakFlawless:true,flag:"alone_walk"},next:"p3_lights_out"}
 ]},
 p3_lights_out:{unskippable:true,bgm:"none",text:()=>[
   "Boots down the corridor.","Lanterns sway.","",W("Lights out.")
-],title:"you do",choices:[{k:"A",label:"Let it go dark.",fx:{},next:"__NIGHT__"}]},
-p3_lights_out_alone:{unskippable:true,bgm:"none",text:()=>[
-  "You take the corridor slower.","Your own footsteps start sounding unfamiliar.","",W("Lights out.")
-],title:"you do",choices:[{k:"A",label:"Let it go dark.",fx:{},next:"__NIGHT__"}]},
+],title:"you do",choices:[{k:"A",label:"Let it go dark.",fx:{},next:"__NIGHT_D1__"}]},
 
-p3_night_cafeteria_intro:{unskippable:true,bgm:"night",text:()=>[
+/* DAY 1 NIGHT cafeteria */
+p3_night_cafeteria_intro:{unskippable:true,bgm:"d1_night",text:()=>[
   "Cafeteria noise, muted by stone.","Tin bowls. Low conversation.","",
   "Night makes people talk softer.","Night makes people tell the truth by accident."
 ],title:"where do you sit?",choices:[
-  {k:"A",label:"Sit with Mira & Steve.",fx:{rel:{k:"mira",d:+1}},next:"p3_night_table_ms"},
-  {k:"B",label:"Approach Nat.",req:{flag:"did_well_vs_nat"},fx:{},next:"p3_night_table_nat"},
+  {k:"A",label:"Sit with Mira & Steve.",fx:{rel:{k:"mira",d:+1},flag:"sat_ms"},next:"p3_night_table_ms"},
+  {k:"B",label:"Approach Nat.",req:{flag:"did_nat_station"},fx:{flag:"sat_nat"},next:"p3_night_table_nat"},
   {k:"C",label:"Eat alone.",fx:{breakFlawless:true,flag:"night_alone"},next:"p3_night_alone"}
 ]},
-
-p3_night_table_ms:{bgm:"night",text:()=>[
+p3_night_table_ms:{bgm:"d1_night",text:()=>[
   "Mira shifts so you can sit.","Steve immediately pretends it was his idea.","",
   N("Steve","You survived day one. That’s basically a medal."),
   N("Mira","…Ignore him."),"",
   "For a minute, the stew isn’t disgusting.","Or maybe you just stop noticing."
 ],title:"you say",choices:[
   {k:"1",label:"\"I’m glad I’m not alone here.\"",fx:{rel:{k:"mira",d:+2},rel:{k:"steve",d:+1},flag:"night_bond"},next:"p3_night_ms_bond"},
-  {k:"2",label:"\"What’s Nat’s problem?\"",fx:{breakFlawless:true,flag:"nat_obsession",rel:{k:"mira",d:+1}},next:"p3_night_ms_nat"},
-  {k:"3",label:"\"Tell me something normal.\"",fx:{rel:{k:"steve",d:+2}},next:"p3_night_ms_normal"}
+  {k:"2",label:"\"Tell me something normal.\"",fx:{rel:{k:"steve",d:+2}},next:"p3_night_ms_normal"}
 ]},
-p3_night_ms_bond:{bgm:"night",text:()=>[
+p3_night_ms_bond:{bgm:"d1_night",text:()=>[
   "Steve’s grin softens like it surprised him.","",
   N("Steve","Yeah… same."),N("Steve","I hate that it matters. But it does."),"",
-  "Mira stirs her bowl twice. Then—",N("Mira","If you wake up shaking, don’t pretend you didn’t."),"",
-  "Her voice stays calm, like it’s a rule.","Like it’s allowed."
+  "Mira slides her cup closer. A small, quiet invitation.","",
+  N("Mira","If you wake up shaking, don’t pretend you didn’t."),
+  "Her voice stays calm, like it’s a rule."
 ],title:"you answer",choices:[
-  {k:"A",label:"\"Okay.\" (accept it)",fx:{rel:{k:"mira",d:+1},flag:"night_accept"},next:"p3_night_end"},
-  {k:"B",label:"\"I’m fine.\" (lie cleanly)",fx:{breakFlawless:true,flag:"night_lie"},next:"p3_night_end"},
+  {k:"A",label:"\"Okay.\" (accept it)",fx:{rel:{k:"mira",d:+1}},next:"p3_night_end"},
+  {k:"B",label:"\"I’m fine.\" (lie cleanly)",fx:{warnFlawless:1},next:"p3_night_end"},
   {k:"C",label:"\"Thanks.\" (quiet)",fx:{rel:{k:"steve",d:+1}},next:"p3_night_end"}
 ]},
-p3_night_ms_normal:{bgm:"night",text:()=>[
+p3_night_ms_normal:{bgm:"d1_night",text:()=>[
   "Steve looks up like he’s searching the ceiling for something safe.","",
-  N("Steve","Normal… okay."),
   N("Steve","Normal is: the bread’s always hard on Tuesdays."),
-  N("Steve","Normal is: somebody snores in Barracks B like a dying horse."),"",
-  "Mira’s mouth twitches—almost a smile.",N("Mira","He’s not wrong."),"",
-  "The air loosens. Just a little."
+  N("Steve","Normal is: somebody snores in Barracks B like a dying horse."),
+  "","Mira’s mouth twitches—almost a smile.",N("Mira","He’s not wrong."),
+  "","The air loosens. Just a little."
 ],title:"you do",choices:[
-  {k:"A",label:"Laugh once. Let it count.",fx:{rel:{k:"steve",d:+1},flag:"night_laugh"},next:"p3_night_end"},
-  {k:"B",label:"\"Tell me more.\" (stay with them)",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1},flag:"night_stay"},next:"p3_night_ms_normal_more"},
-  {k:"C",label:"Nod. Hold the quiet.",fx:{flag:"night_quiet"},next:"p3_night_end"}
+  {k:"A",label:"Laugh once. Let it count.",fx:{rel:{k:"steve",d:+1}},next:"p3_night_end"},
+  {k:"B",label:"Stay. Don’t rush the quiet.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1}},next:"p3_night_end"}
 ]},
-p3_night_ms_normal_more:{bgm:"night",text:()=>[
-  "Steve leans in like he’s sharing military intelligence.","",
-  N("Steve","If you want extra rations, befriend the kitchen guy."),
-  N("Steve","If you want peace, don’t challenge Nat when he’s bored."),"",
-  "Mira taps her spoon against the bowl.. once.",
-  N("Mira","And don’t skip on sleep."),
-  N("Mira","Your head turns on you faster than any Titan does, you need 8 hours of sleep.. Okay?"),"",
-  "Steve salutes her with his cup.",N("Steve","Yes, mom.")
-],title:"you say",choices:[
-  {k:"A",label:"\"Noted.\" (smile)",fx:{rel:{k:"mira",d:+1}},next:"p3_night_end"},
-  {k:"B",label:"\"Thanks.\" (mean it)",fx:{rel:{k:"steve",d:+1},flag:"night_gratitude"},next:"p3_night_end"}
-]},
-p3_night_ms_nat:{bgm:"night",text:()=>[
-  "Steve glances toward Nat’s table and lowers his voice.","",
-  N("Steve","He’s like that with everyone."),
-  N("Steve","If he can’t beat you, he’ll stand on your shadow."),"",
-  "Mira doesn’t laugh.",N("Mira","Just… don’t let him choose who you are.")
-],title:"you decide",choices:[
-  {k:"A",label:"\"I won’t.\"",fx:{flag:"resolve"},next:"p3_night_end"},
-  {k:"B",label:"\"I want to crush him.\"",fx:{breakFlawless:true,flag:"plotting"},next:"p3_night_end"}
-]},
-p3_night_table_nat:{bgm:"night",text:()=>[
+p3_night_table_nat:{bgm:"d1_night",text:()=>[
   "Nat doesn’t look up when you approach.","But he doesn’t tell you to leave.","",
   N("Nat","You did okay."),N("Nat","Don’t let it make you stupid."),"",
   "It’s almost… a compliment.","Almost."
 ],title:"you answer",choices:[
-  {k:"1",label:"\"Thanks.\" (swallow it)",fx:{rel:{k:"nat",d:+2},flag:"nat_respect_more"},next:"p3_night_nat_follow"},
-  {k:"2",label:"\"You’re not the only one trying.\"",fx:{breakFlawless:true,rel:{k:"nat",d:-2},flag:"nat_frayed"},next:"p3_night_nat_follow"},
-  {k:"3",label:"Say nothing. Sit anyway.",fx:{flag:"nat_silent_sit",rel:{k:"nat",d:+1}},next:"p3_night_nat_follow"}
+  {k:"1",label:"\"Thanks.\" (swallow it)",fx:{rel:{k:"nat",d:+2}},next:"p3_night_nat_follow"},
+  {k:"2",label:"Say nothing. Sit anyway.",fx:{rel:{k:"nat",d:+1}},next:"p3_night_nat_follow"}
 ]},
-p3_night_nat_follow:{bgm:"night",text:()=>[
+p3_night_nat_follow:{bgm:"d1_night",text:()=>[
   "Nat eats like he’s timing himself.","Then, quietly—","",
   N("Nat","Tomorrow is worse."),
-  N("Nat","If you fall behind, people stop seeing you."),"",
-  "That lands wrong.","Because it sounds… true."
+  N("Nat","If you fall behind, people stop seeing you."),
+  "","That lands wrong.","Because it sounds… true."
 ],title:"you respond",choices:[
-  {k:"A",label:"\"I won’t fall behind.\"",fx:{initiative:+1,flag:"challenge"},next:"p3_night_end"},
-  {k:"B",label:"\"Why do you care?\"",fx:{breakFlawless:true,flag:"asked_why",rel:{k:"nat",d:-1}},next:"p3_night_end"},
+  {k:"A",label:"\"I won’t fall behind.\"",fx:{initiative:+1,flag:"nat_line_callback"},next:"p3_night_end"},
+  {k:"B",label:"\"Why do you care?\"",fx:{warnFlawless:1,rel:{k:"nat",d:-1}},next:"p3_night_end"},
   {k:"C",label:"Leave before it gets worse.",fx:{flag:"left_nat"},next:"p3_night_end"}
 ]},
-p3_night_alone:{bgm:"night",text:()=>[
+p3_night_alone:{bgm:"d1_night",text:()=>[
   "You sit where nobody has to look at you.","You eat fast.","",
   "Everyone’s laughter feels like it’s behind glass.",
   "Your spoon scrapes the bowl.","The sound is louder than it should be."
 ],title:"you do",choices:[
   {k:"A",label:"Finish and leave.",fx:{},next:"p3_night_end"},
-  {k:"B",label:"Go sit with Mira & Steve after all.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1}},next:"p3_night_table_ms"}
+  {k:"B",label:"Go sit with Mira & Steve after all.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1},flag:"sat_ms"},next:"p3_night_table_ms"}
 ]},
-p3_night_end:{end:true,bgm:"night",text:()=>[
+p3_night_end:{bgm:"d1_night",text:()=>[
   "Night settles in layers.",
   "The barracks takes your name and replaces it with breathing.",
   "",
   "Tomorrow is waiting.",
   "",
   PICK("End of Phase 3 — Day 1 (night).")
+],title:"sleep",choices:[
+  {k:"A",label:"Sleep.",fx:{},next:"__DAY2__"}
+]},
+
+/* ===== DAY 2 ENTRY / MORNING WAKE ROUTING ===== */
+p3_d2_entry:{unskippable:true,bgm:"d2_day",text:()=>[
+  W("Phase 3. Day 2."),
+  "",
+  "Morning turns the barracks back into a machine.",
+  "Wood creaks. Canteens clink. Someone coughs like it hurts.",
+  "",
+  W("Get up. Move.")
+],title:"next",choices:[
+  {k:"A",label:"Continue.",fx:{},next:"p3_d2_route_wake"}
+]},
+p3_d2_route_wake:{bgm:"d2_day",text:()=>[""],title:"",choices:[
+  {k:"A",label:"(route)",fx:{},next:"__ROUTE_WAKE__"}
+]},
+
+/* ===== MORNING SCENES ===== */
+p3_d2_morning_ms_wake:{bgm:"d2_day",text:()=>[
+  "A hand slaps your boot—gentle, urgent.",
+  "",
+  N("Steve","Wake up. Before Enzo decides to practice yelling."),
+  "Mira’s already sitting up, smoothing her hair like it’s armor.",
+  "",
+  "Steve grins, then hesitates.",
+  N("Steve","Don’t laugh.. okay? Cause I think we should know each other's full names."),
+  N("Steve","I’m Steve Carrot."),
+  "",
+  "He waits for the reaction like it might kill him.",
+  "Mira covers a smile with her sleeve."
+],title:"you reply",choices:[
+  {k:"A",label:"\"I won’t laugh.\" (soft)",fx:{rel:{k:"steve",d:+2},rel:{k:"mira",d:+1},flag:"learned_steve_fullname"},next:"p3_d2_morning_ms_after"},
+  {k:"B",label:"\"Steve… Carrot?\" (repeat it)",fx:{rel:{k:"steve",d:+1}},next:"p3_d2_morning_ms_after"},
+  {k:"C",label:"Laugh once anyway.",fx:{warnFlawless:1,rel:{k:"steve",d:-1}},next:"p3_d2_morning_ms_after"}
+]},
+p3_d2_morning_ms_after:{bgm:"d2_day",text:()=>[
+  "Mira nudges a tin cup toward you.",
+  "The water tastes like metal and sleep.",
+  "",
+  N("Mira","Today’s longer."),
+  N("Mira","If you feel your head go loud… don’t hide."),
+  "",
+  "Steve points toward the hall.",
+  N("Steve","Come on. We’ll move as a pack."),
+  "It’s stupidly comforting."
+],title:"morning",choices:[
+  {k:"A",label:"Go with them.",fx:{flag:"d2_morning_with_ms"},next:"p3_d2_morning_hub"},
+  {k:"B",label:"Split off. Do your own prep.",fx:{warnFlawless:1},next:"p3_d2_morning_hub"}
+]},
+
+p3_d2_morning_nat_wake:{bgm:"d2_day",text:()=>[
+  "A sharp clang in the corridor.",
+  "A cadet yelps.",
+  "",
+  N("Instructor Enzo","Do it again. Now."),
+  N("Instructor Enzo","Louder. Move."),
+  "",
+  "Nat staggers half a step, catches himself immediately.",
+  "Just enough to tell everyone; he’s not special.",
+  "",
+  "Nat’s eyes would flick to you when he sees you awake.",
+  N("Nat","Up."),
+  N("Nat","Don’t make me wait on you.")
+],title:"you do",choices:[
+  {k:"A",label:"Get up immediately.",fx:{obedience:+1,flag:"d2_morning_nat_sync"},next:"p3_d2_morning_hub"},
+  {k:"B",label:"Watch Enzo for a second.",fx:{warnFlawless:1,flag:"d2_morning_watched_enzo"},next:"p3_d2_morning_hub"}
+]},
+
+p3_d2_morning_normal_wake:{bgm:"d2_day",text:()=>[
+  "No one wakes you.",
+  "You wake because the room changed shape--",
+  "because everyone else is already moving.",
+  "",
+  "A boot hits the floor. A strap snaps tight.",
+  "Somebody whispers a prayer that sounds practiced.",
+  "",
+  "You sit up, late by a few heartbeats."
+],title:"you do",choices:[
+  {k:"A",label:"Get up. Fast.",fx:{obedience:+1},next:"p3_d2_morning_hub"},
+  {k:"B",label:"Stay still one more second.",fx:{hesitation:+1,warnFlawless:1},next:"p3_d2_morning_hub"}
+]},
+
+p3_d2_morning_hub:{bgm:"d2_day",text:()=>[
+  "Morning briefing is short.",
+  "Enzo doesn’t waste words on people he can replace.",
+  "",
+  W("Day 2 schedule; endurance. coordination. stress response."),
+  W("You will be evaluated in motion."),
+  "",
+  "The yard waits like a mouth."
+],title:"morning choice",choices:[
+  {k:"A",label:"Stick with Mira & Steve.",req:{flag:"d2_morning_with_ms"},fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1}},next:"p3_d2_morning_ms_activity"},
+  {k:"B",label:"Shadow Nat’s pace.",req:{flag:"sat_nat"},fx:{rel:{k:"nat",d:+1}},next:"p3_d2_morning_nat_activity"},
+  {k:"C",label:"Do the morning alone.",fx:{warnFlawless:1},next:"p3_d2_morning_solo"}
+]},
+p3_d2_morning_ms_activity:{bgm:"d2_day",text:()=>[
+  "Steve makes a game out of warming up.",
+  "Counted steps. Perfect turns. Quiet jokes.",
+  "",
+  N("Steve","If I pass out.. can you please carry me back?"),
+  N("Mira","If you pass out, I’m stepping over you."),
+  "He laughs.. relieved she’s playing back.",
+  "",
+  "Mira checks your strap-- careful, practiced.",
+  N("Mira","You’re okay. That's good."),
+  "She says it like a decision."
+],title:"to training",choices:[
+  {k:"A",label:"Head to drills.",fx:{},next:"p3_d2_afternoon_entry"}
+]},
+p3_d2_morning_nat_activity:{bgm:"d2_day",text:()=>[
+  "Nat warms up like a machine cranked up to the max.",
+  "No wasted motion. No extra breath.",
+  "",
+  N("Nat","People only watch mistakes."),
+  N("Nat","They don’t watch the effort we put in."),
+  "",
+  "He glances at you-- quick.",
+  N("Nat","If you want respect, earn it where it hurts.")
+],title:"to training",choices:[
+  {k:"A",label:"Head to drills.",fx:{},next:"p3_d2_afternoon_entry"}
+]},
+p3_d2_morning_solo:{bgm:"d2_day",text:()=>[
+  "You warm up alone.",
+  "Your muscles complain like they’ve been betrayed.",
+  "",
+  "A few cadets look at you and look away.",
+  "Like eye contact costs something."
+],title:"to training",choices:[
+  {k:"A",label:"Head to drills.",fx:{},next:"p3_d2_afternoon_entry"}
+]},
+
+/* ===== DAY 2 AFTERNOON -> EVENING HUB ===== */
+p3_d2_afternoon_entry:{bgm:"d2_eve",text:()=>[
+  "Endurance drills chew time into pieces.",
+  "Run. Stop. Lift. Hold.",
+  "",
+  "The sun moves like it’s watching you fail slowly.",
+  "",
+  W("Again."),
+  W("You will not bargain with fatigue.")
+],title:"how you handle it",choices:[
+  {k:"A",label:"Stay clean. Pace yourself.",fx:{obedience:+1,flag:"d2_clean_endurance"},next:"p3_d2_evening_hub"},
+  {k:"B",label:"Push too hard. Prove something.",fx:{warnFlawless:1,initiative:+1,flag:"d2_overpushed"},next:"p3_d2_evening_hub"},
+  {k:"C",label:"Lag behind.",fx:{hesitation:+1,breakFlawless:true,flag:"d2_lagged"},next:"p3_d2_evening_hub"}
+]},
+
+p3_d2_evening_hub:{bgm:"d2_eve",text:()=>[
+  "Evening hits like a slow bruise.",
+  "Your muscles don’t relax. They just… stop fighting.",
+  "",
+  "Cadets get assigned small work--",
+  "cleaning gear, hauling water, fixing torn straps.",
+  "",
+  "People look for comfort the way starving people look for bread. Cause bread tastes better than key."
+],title:"evening path",choices:[
+  {k:"A",label:"Evening with Mira & Steve.",req:{flag:"sat_ms"},fx:{flag:"d2_path_ms"},next:"p3_d2_evening_ms"},
+  {k:"B",label:"Evening with Nat.",req:{flag:"sat_nat"},fx:{flag:"d2_path_nat"},next:"p3_d2_evening_nat"},
+  {k:"C",label:"Keep to yourself this evening.",fx:{warnFlawless:1},next:"p3_d2_evening_normal"}
+]},
+
+/* ===== MIRANSTEVE ===== */
+p3_d2_evening_ms:{bgm:"d2_eve",text:()=>[
+  "Steve would drag your shirt toward the wash line like it’s urgent.",
+  "Mira follows without a word, arms full of folded cloth",
+  "",
+  N("Steve","Okay. Evening plan."),
+  N("Steve","One, don’t get noticed"),
+  N("Steve","Two, don’t get yelled at."),
+  N("Steve","Anddd three, if we can, let's steal five minutes of peace."),
+  "",
+  "He says it like he’s joking.",
+  "Mira follows without a word, arms full of folded cloth",
+  "",
+  "You end up scrubbing stains out of uniform sleeves.",
+  "The water is cold.. to the point it stings.",
+  "",
+  N("Mira","Here."),
+  "She passes you soap. Don't drop it.",
+  "It’s the kind of caring that doesn’t ask permission.",
+  "",
+  "Steve leans close, his voice low.",
+  N("Steve","There’s a storage room near the mess hall."),
+  N("Steve","Sometimes… extra bread ends up there. I went once."),
+  "",
+  "Mira gives him a warning look.",
+  N("Mira","Don’t get us in trouble."),
+  "",
+  "Steve lifts his hands. Innocent.",
+  N("Steve","I said SOMETIMES.")
+],title:"you respond",choices:[
+  {k:"A",label:"Help with the laundry. Keep it calm.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1}},next:"p3_d2_evening_ms_laundry"},
+  {k:"B",label:"Ask about Steve’s name again.",fx:{rel:{k:"steve",d:+2}},next:"p3_d2_evening_ms_name"},
+  {k:"C",label:"Follow the ‘bread’ idea.",fx:{warnFlawless:1,flag:"d2_bread_attempt"},next:"p3_d2_evening_ms_bread"}
+]},
+p3_d2_evening_ms_laundry:{bgm:"d2_eve",text:()=>[
+  "You scrub until your fingers go numb.",
+  "The work is stupidly grounding.",
+  "",
+  "Mira hums something under her breath.. barely audible.",
+  "Not a song you recognize. Just… a pattern.",
+  "",
+  N("Mira","It helps."),
+  N("Mira","If you give your head something small to hold."),
+  "",
+  "Steve wrings out a shirt too hard and water splashes his face.",
+  N("Steve","I’m being attacked."),
+  "Mira giggles. A real one.",
+  "",
+  "For a second, the Trainee Corps doesn’t feel like a trap."
+],title:"next",choices:[
+  {k:"A",label:"Head back inside together.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1}},next:"p3_d2_night_hub"}
+]},
+p3_d2_evening_ms_name:{bgm:"d2_eve",text:()=>[
+  "Steve keeps glancing away like the name still embarrasses him.",
+  "",
+  N("Steve","It’s not even funny."),
+  N("Steve","My dad thought it was funny."),
+  N("Steve","He said, ‘If you’re gonna be scared, at least have a name people remember.’"),
+  "",
+  "Mira’s eyes soften.",
+  N("Mira","It’s a good name...?"),
+  "Steve blinks at that like it hit him harder than a punch.",
+  "",
+  N("Steve","…Thanks."),
+  "His voice goes small for one second.",
+  "Then he clears his throat and tries to be normal again."
+],title:"next",choices:[
+  {k:"A",label:"\"I’ll remember it.\" (simple)",fx:{rel:{k:"steve",d:+2}},next:"p3_d2_night_hub"},
+  {k:"B",label:"\"You don’t have to joke all the time.\" ",fx:{rel:{k:"steve",d:+2},flag:"d2_steve_seen"},next:"p3_d2_night_hub"}
+]},
+p3_d2_evening_ms_bread:{bgm:"d2_eve",text:()=>[
+  "You follow Steve down a side corridor.",
+  "He tiptoes beautifully.. better than any ballet dancer.",
+  "",
+  "A door. A latch. A narrow crack of darkness.",
+  "",
+  "Mira pauses.",
+  N("Mira","If Enzo catches you.. forget we know each other okay?"),
+  "",
+  "Steve opens the door half an inch--",
+  "and immediately freezes.",
+  "",
+  "Footsteps.",
+  "Not hurried. Not lost.",
+  "Someone who knows exactly where they’re going.",
+  "",
+  N("Steve","…Abort mission. Black flare."),
+  "You slide away like you were never there.",
+  "Your heart takes an extra second to stop sprinting."
+],title:"next",choices:[
+  {k:"A",label:"Back off. Return quietly.",fx:{obedience:+1},next:"p3_d2_night_hub"},
+  {k:"B",label:"Laugh it off.",fx:{warnFlawless:1},next:"p3_d2_night_hub"}
+]},
+
+/* ===== EXPANDED DAY 2 EVENING — NAT ===== */
+p3_d2_evening_nat:{bgm:"d2_eve",text:()=>[
+  "Nat doesn’t invite you.",
+  "He just… starts walking, and you either follow or you don’t.",
+  "",
+  "He takes you to a quiet corner of the yard where the light dies early.",
+  "A crate of gear sits there like it’s waiting to be judged.",
+  "",
+  N("Nat","Maintenance."),
+  N("Nat","If your equipment fails, you'll die like an idiot. My brother taught me that."),
+  "",
+  "He hands you a cloth. Then another. Then a small tin of oil.",
+  "It feels almost domestic-- until you remember it’s for killing.",
+  "",
+  "Nat works fast, precise.",
+  "His fingers are nicked in old places.",
+  "",
+  N("Nat","You heard what I said last night. Right?"),
+  N("Nat","About falling behind."),
+  "",
+  "He doesn’t look up when he says it.",
+  "Like eye contact would soften it."
+],title:"you answer",choices:[
+  {k:"A",label:"\"I heard you.\" (no excuses)",fx:{rel:{k:"nat",d:+2},flag:"d2_nat_trust"},next:"p3_d2_evening_nat_more"},
+  {k:"B",label:"\"You talk like you’ve been left behind.\" ",fx:{warnFlawless:1,rel:{k:"nat",d:-1}},next:"p3_d2_evening_nat_more"},
+  {k:"C",label:"Stay quiet. Keep working.",fx:{rel:{k:"nat",d:+1}},next:"p3_d2_evening_nat_more"}
+]},
+p3_d2_evening_nat_more:{bgm:"d2_eve",text:()=>[
+  "Nat oils the hinge of a blade.",
+  "The metal squeaks once, then goes silent.",
+  "",
+  N("Nat","I had a brother."),
+  "The words come out flat. Practiced.",
+  N("Nat","Scouting Legion took him outside the walls. An expedition."),
+  N("Nat","They brought back a report and a piece of cloth with his name."),
+  "",
+  "He wipes his hands like he’s wiping the memory off.",
+  "",
+  N("Nat","So yeah."),
+  N("Nat","I don’t like watching people fall behind."),
+  N("Nat","Because you don’t come back from it."),
+  "",
+  "He finally looks at you.",
+  "Not warm. But… direct.",
+  "",
+  N("Nat","You can be useful."),
+  N("Nat","Or you can be another shadow.")
+],title:"choose",choices:[
+  {k:"A",label:"\"Tell me what to do.\" (earn it)",fx:{obedience:+1,rel:{k:"nat",d:+2}},next:"p3_d2_evening_nat_tasks"},
+  {k:"B",label:"\"I’ll do it my way.\" (controlled)",fx:{initiative:+1,rel:{k:"nat",d:+1},warnFlawless:1},next:"p3_d2_evening_nat_tasks"},
+  {k:"C",label:"\"I’m not your project.\" ",fx:{breakFlawless:true,rel:{k:"nat",d:-2}},next:"p3_d2_evening_nat_tasks"}
+]},
+p3_d2_evening_nat_tasks:{bgm:"d2_eve",text:()=>[
+  "Nat sets a small list like he’s assigning shifts:",
+  "",
+  N("Nat","Run the perimeter once."),
+  N("Nat","Then back here."),
+  N("Nat","If you’re still standing, we're gonna talk."),
+  "",
+  "It’s a test.",
+  "It’s always a test.",
+  "",
+  "You run until your lungs feel thin.",
+  "You come back with your throat burning.",
+  "",
+  "Nat nods like he expected it.",
+  N("Nat","Good."),
+  "",
+  "He sits on the crate.. like he owns the quiet."
+],title:"evening talk",choices:[
+  {k:"A",label:"Sit. Hear him out.",fx:{rel:{k:"nat",d:+1}},next:"p3_d2_night_branch_talk"},
+  {k:"B",label:"Leave before it gets personal.",fx:{warnFlawless:1},next:"p3_d2_night_hub"}
+]},
+
+p3_d2_evening_normal:{bgm:"d2_eve",text:()=>[
+  "You do the assigned work.",
+  "Quietly. Efficiently.",
+  "",
+  "Nobody bothers you.",
+  "That’s either peace or a warning."
+],title:"night",choices:[
+  {k:"A",label:"Head to night.",fx:{},next:"p3_d2_night_hub"}
+]},
+
+/* ===== DAY 2 NIGHT HUB ===== */
+p3_d2_night_hub:{bgm:"d2_night",text:()=>[
+  "Night again.",
+  "Different from yesterday.",
+  "Heavier-- because now you know what tomorrow costs.",
+  "",
+  "People whisper. Someone laughs too loud. Someone prays too hard."
+],title:"night choice",choices:[
+  {k:"A",label:"Stay with Mira & Steve.",req:{flag:"sat_ms"},fx:{},next:"p3_d2_night_ms"},
+  {k:"B",label:"Find Nat.",req:{flag:"sat_nat"},fx:{},next:"p3_d2_night_nat"},
+  {k:"C",label:"Sleep early.",fx:{},next:"p3_d2_end"}
+]},
+p3_d2_night_ms:{bgm:"d2_night",text:()=>[
+  "Mira and Steve make room for you.",
+  "",
+  "Steve throws a rolled sock at Mira’s shoulder.",
+  "She catches it without looking.",
+  "",
+  N("Steve","Alright. New rule."),
+  N("Steve","If today sucked, we’re allowed one stupid thing."),
+  "",
+  "Mira’s eyes meet yours.",
+  N("Mira","Only if you want."),
+  "",
+  "Steve grins.",
+  N("Steve","Pillow fight. Winner gets the good corner of the mattress!")
+],title:"you choose",choices:[
+  {k:"A",label:"Join the pillow fight.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+2},flag:"d2_pillowfight"},next:"p3_d2_night_ms_pillow"},
+  {k:"B",label:"Stay close, just watch.",fx:{rel:{k:"mira",d:+1}},next:"p3_d2_end"}
+]},
+p3_d2_night_ms_pillow:{bgm:"d2_night",text:()=>[
+  "It starts quietly..",
+  "then turns into chaos.",
+  "",
+  "A pillow smacks your ear.",
+  "You swing back on instinct.",
+  "Steve yelps like he’s been stabbed.",
+  "",
+  "Mira laughs.",
+  "A real laugh.",
+  "The kind that proves she’s still here.",
+  "",
+  "For two minutes you forget about the horrors of the outside walls.",
+  "For two minutes you feel like a person again."
+],title:"sleep",choices:[
+  {k:"A",label:"Sleep.",fx:{},next:"p3_d2_end"}
+]},
+p3_d2_night_nat:{bgm:"d2_night",text:()=>[
+  "Nat sits where the lantern light doesn’t reach.",
+  "He pats the space beside him once.",
+  "",
+  N("Nat","Question."),
+  N("Nat","What branch are you interested in joining?")
+],title:"choose branch",choices:[
+  {k:"A",label:"Scouting Legion.",fx:{flag:"branch_sl"},next:"p3_d2_night_nat_sl"},
+  {k:"B",label:"Stationary Guard.",fx:{flag:"branch_garrison"},next:"p3_d2_night_nat_gar"},
+  {k:"C",label:"Military Police.",fx:{flag:"branch_mp"},next:"p3_d2_night_nat_mp"}
+]},
+p3_d2_night_nat_sl:{bgm:"d2_night",text:()=>[
+  "Nat exhales through his nose.",
+  "",
+  N("Nat","The Scouting Legion…"),
+  N("Nat","I lost my brother to those fucking Titans."),
+  N("Nat","And I’ve been following in his footsteps to avenge him."),
+  "",
+  "He looks at you like he’s measuring something..",
+  N("Nat","If that’s your path… I’ll follow you in it."),
+  N("Nat","We can be buddies on the battlefield. Slay every goddamn titan."),
+  "",
+  "The word ‘buddies’ sounds wrong in his mouth.",
+  "That’s how you know he means it."
+],title:"sleep",choices:[{k:"A",label:"Sleep.",fx:{rel:{k:"nat",d:+2},flag:"nat_bonded"},next:"p3_d2_end"}]},
+p3_d2_night_nat_gar:{bgm:"d2_night",text:()=>[
+  "Nat tilts his head—considering.",
+  "",
+  N("Nat","Stationary Guard."),
+  N("Nat","Safe. Compared to the rest."),
+  N("Nat","But don’t confuse safe with easy."),
+  "",
+  "He taps the floor once.",
+  N("Nat","If that’s where you go…"),
+  N("Nat","I won’t judge you for living."),
+  "",
+  "It’s the closest thing to approval you’ve heard from him."
+],title:"sleep",choices:[{k:"A",label:"Sleep.",fx:{rel:{k:"nat",d:+1}},next:"p3_d2_end"}]},
+p3_d2_night_nat_mp:{bgm:"d2_night",text:()=>[
+  "Nat’s mouth twitches like he’s suppressing a reaction.",
+  "",
+  N("Nat","Military Police, eh..?"),
+  N("Nat","You’ll need to graduate flawlessly."),
+  "",
+  "His eyes flick to your face sharp.",
+  N("Nat","But I’ll follow you there…"),
+  N("Nat","If we both make it."),
+  "",
+  "For once, the ambition sounds like a promise, not a dare."
+],title:"sleep",choices:[{k:"A",label:"Sleep.",fx:{rel:{k:"nat",d:+2}},next:"p3_d2_end"}]},
+
+p3_d2_end:{end:true,bgm:"d2_night",text:()=>[
+  "Night folds over you.",
+  "Your body gives up first.",
+  "Your mind follows later.",
+  "",
+  PICK("End of Phase 3 — Day 2.")
 ]}
 };
 
-/* music router by scene */
-function applyBgm(scene){
-  const tag=scene&&scene.bgm;
-  // phase 3 daytime/evening/night only; keep phase 2 silent unless you want later
-  if(tag==="day"){ stopLoop(eveSong,900); stopLoop(nightSong,900); startLoop(daySong,1200); }
-  else if(tag==="eve"){ stopLoop(daySong,900); stopLoop(nightSong,900); startLoop(eveSong,1200); }
-  else if(tag==="night"){ stopLoop(daySong,900); stopLoop(eveSong,1600); startLoop(nightSong,1400); }
-  else if(tag==="none"){ stopLoop(daySong,900); stopLoop(eveSong,1600); /* night starts after fade */ }
+/* ===== music router (now day-aware) ===== */
+/* FIX: make this GLOBAL so applyBgm can read it */
+let currentBgmTag = null;
+
+function ensureLoop(loop, ms=1200){
+  // if already on, don't restart (no cuts)
+  if(loop.on){
+    // if volume got lowered, gently bring it back
+    fade(loop, loop.target, ms);
+    return;
+  }
+  startLoop(loop, ms);
 }
 
-/* choices */
+function applyBgm(scene, force=false){
+  const tag = scene && scene.bgm;
+  if(!tag) return;
+
+  // Don't restart same tag unless forced
+  if(!force && currentBgmTag === tag) return;
+  currentBgmTag = tag;
+
+  if(tag === "none"){
+    stopAllMusic(600);
+    return;
+  }
+
+  // Only stop other tracks when tag actually changes
+  stopAllMusic(250);
+
+  if(tag==="d1_day"){ document.body.classList.remove("night"); ensureLoop(d1_morning,1200); }
+  if(tag==="d1_eve"){ document.body.classList.remove("night"); ensureLoop(d1_evening,1200); }
+  if(tag==="d1_night"){ document.body.classList.add("night"); ensureLoop(d1_night,1200); }
+
+  if(tag==="d2_day"){ document.body.classList.remove("night"); ensureLoop(d2_morning,1200); }
+  if(tag==="d2_eve"){ document.body.classList.remove("night"); ensureLoop(d2_evening,1200); }
+  if(tag==="d2_night"){ document.body.classList.add("night"); ensureLoop(d2_night,1200); }
+}
+
+/* ===== choices / hotkeys (typing-safe) ===== */
 function renderChoices(scene){
   clearChoices(); if(scene.death||scene.end) return;
   const raw=scene.choices||[];
@@ -922,13 +1431,28 @@ function renderChoices(scene){
     b.onclick=()=>pick(idx);
     choicesEl.appendChild(b);
   });
+
   document.onkeydown=e=>{
+    if(statsModal.classList.contains("show")) return;
     if(locked||modal.classList.contains("show")) return;
+
+    // >>> KEY FIX: don't fire choice hotkeys while typing in input <<<
+    const ae=document.activeElement;
+    if(ae===inp || (ae && (ae.tagName==="INPUT"||ae.tagName==="TEXTAREA"||ae.isContentEditable))) return;
+
     const key=e.key.toUpperCase();
     const i=currentChoices.findIndex(x=>String(x.k).toUpperCase()===key);
     if(i>=0){e.preventDefault();pick(i)}
   };
 }
+const checkReq=req=>{
+  if(!req) return true;
+  if(req.flag && !hasFlag(req.flag)) return false;
+  if(req.nflag && hasFlag(req.nflag)) return false;
+  if(req.rel){const cur=(state.rel&&state.rel[req.rel.k])||0; if(cur < (req.rel.min??0)) return false;}
+  if(req.flawless && !state.flawless) return false;
+  return true;
+};
 
 /* death */
 async function runDeath(scene){
@@ -958,16 +1482,25 @@ async function runDeath(scene){
 
 /* navigation */
 async function goto(id){
+  // special routing nodes
+  if(id==="__ROUTE_WAKE__"){
+    if(hasFlag("sat_ms")) id="p3_d2_morning_ms_wake";
+    else if(hasFlag("sat_nat")) id="p3_d2_morning_nat_wake";
+    else id="p3_d2_morning_normal_wake";
+  }
+
   sceneId=id;
   const scene=SCENES[id];
   if(!scene) return;
 
-  autosave(); // save before leaving old scene (cheap + safe)
+  autosave();
 
   locked=true; clearChoices();
   if(scene.death){ await runDeath(scene); return; }
 
   setBlood(0); setVignette(0); hideAllBoxes();
+
+  /* FIX: removed the broken local 'let currentBgmTag = null;' */
   applyBgm(scene);
 
   const prevForce=forceNoSkip,prevSkip=settings.skip,prevSpeed=settings.speed;
@@ -1003,13 +1536,18 @@ function pick(i){
     await say(["",PICK(`> ${c.k}. ${c.label}`)]);
     applyFx(c.fx);
 
-    // CLEAN NIGHT TRANSITION owned by "Let it go dark."
-    if(c.next==="__NIGHT__"){
-      // fade out training (armyG) gently, give it a beat
-      stopLoop(eveSong,1600);
-      await wait(700);
-      await fadeToNight();
+    if(c.next==="__NIGHT_D1__"){
+      await wait(650);
+      await fadeToNight("d1_night");
       await goto("p3_night_cafeteria_intro");
+      return;
+    }
+    if(c.next==="__DAY2__"){
+      state.day=2;
+      await wait(650);
+      // force reset from night -> day2 morning
+      await fadeToDay("d2_day");
+      await goto("p3_d2_entry");
       return;
     }
 
@@ -1018,20 +1556,23 @@ function pick(i){
 }
 
 /* flow */
+const enqueue=fn=>(q=q.then(fn).catch(()=>{}));
+
 async function runIntro(){ for(const x of intro) await typeLine(x.t,x.g); showText("your response","phase 1"); }
 
 async function enterPhase2(){
   state.phase=2; phaseNum.textContent="2"; setStatus("RECORDING");
   document.body.classList.remove("night");
-  stopLoop(daySong,300); stopLoop(eveSong,300); stopLoop(nightSong,300);
+  stopAllMusic(250);
   setBlood(0); setVignette(0); setRisk(false); state.dead=false; locked=false;
   clearScreen();
   await goto("field_entry");
 }
 async function enterPhase3(){
   state.phase=3; phaseNum.textContent="3"; setStatus("RECORDING");
+  state.day=1;
   document.body.classList.remove("night");
-  stopLoop(nightSong,300);
+  stopAllMusic(250);
   setBlood(0); setVignette(0); setRisk(false); state.dead=false; locked=false;
   clearScreen();
   await goto("p3_entry");
@@ -1049,8 +1590,8 @@ document.addEventListener("click",start);
 document.addEventListener("keydown",keyStart);
 
 /* skip interactions */
-document.addEventListener("pointerdown",()=>{ if(started&&!modal.classList.contains("show")) requestSkip(); },{passive:true});
-document.addEventListener("keydown",e=>{ if(!started||modal.classList.contains("show")) return; if(e.key===" "||e.key==="Enter") requestSkip(); });
+document.addEventListener("pointerdown",()=>{ if(started&&!modal.classList.contains("show") && !statsModal.classList.contains("show")) requestSkip(); },{passive:true});
+document.addEventListener("keydown",e=>{ if(!started||modal.classList.contains("show")||statsModal.classList.contains("show")) return; if(e.key===" "||e.key==="Enter") requestSkip(); });
 
 /* input */
 send.addEventListener("click",()=>{
@@ -1080,25 +1621,20 @@ send.addEventListener("click",()=>{
 });
 inp.addEventListener("keydown",e=>{ if(e.key==="Enter") send.click(); });
 
-/* phase 2 end -> prompt continue into phase 3 (FIXED: does NOT hijack choices; it only shows input box) */
+/* phase 2 end -> prompt continue into phase 3 */
 const _goto=goto;
 goto=async function(id){
   await _goto(id);
   const scene=SCENES[id];
   if(scene && scene.end && state.phase===2){
-    // show a lightweight status note, but keep input usable
     showStatus("status","logged","Phase 2 complete.\nType: continue");
     state.phase=2.5;
     showText("type: continue","awaiting");
-    // IMPORTANT: don't leave the UI locked
     locked=false;
   }
 };
 
-/* boot: try autosave load if present */
-(function(){
-  render();
-  // if a save exists, don't auto-jump; let player choose via settings load.
-})();
+/* boot */
+(function(){ render(); })();
 </script>
 </body></html>
