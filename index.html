@@ -321,7 +321,6 @@ function fade(loop, to = .6, ms = 1400){
 
 async function startLoop(loop, ms = 1400){
   try{
-    // cancel any pending “pause” from a previous stopLoop
     if(loop.stopTimer){ clearTimeout(loop.stopTimer); loop.stopTimer = null; }
 
     if(!loop.on){
@@ -330,19 +329,13 @@ async function startLoop(loop, ms = 1400){
       await loop.a.play();
     }
     fade(loop, loop.target, ms);
-  }catch{
-    // ignore autoplay failures
-  }
+  }catch{}
 }
 
 function stopLoop(loop, ms = 900){
   if(!loop.on) return;
-
-  // cancel fade so it doesn’t fight the fade-out
   if(loop.fadeTimer){ clearInterval(loop.fadeTimer); loop.fadeTimer = null; }
-
   fade(loop, 0, ms);
-
   if(loop.stopTimer) clearTimeout(loop.stopTimer);
   loop.stopTimer = setTimeout(() => {
     try{ loop.a.pause(); }catch{}
@@ -350,7 +343,6 @@ function stopLoop(loop, ms = 900){
     loop.stopTimer = null;
   }, ms + 120);
 }
-
 
 /* PHASE 3 DAY 1 (original) */
 const d1_morning=mkLoop("dayambience.mp3",0.40);
@@ -460,24 +452,20 @@ function setRisk(on){
   else{setSubbassIntensity(0,300);setVignette(0);stopSubbass(600)}
 }
 
-/* transitions */
-async function fadeToNight(loopTag){
+/* transitions (VISUALS ONLY — music handled by applyBgm) */
+async function fadeToNight(){
   const prevSpeed=settings.speed,prevSkip=settings.skip;
   forceNoSkip=true;skipReq=false;settings.speed=1;settings.skip=false;
   blackout.classList.add("on"); await wait(1150);
   document.body.classList.add("night");
-  if(loopTag==="d1_night"){ stopAllMusic(250); await startLoop(d1_night,1600); }
-  if(loopTag==="d2_night"){ stopAllMusic(250); await startLoop(d2_night,1600); }
   blackout.classList.remove("on"); await wait(1150);
   settings.speed=prevSpeed;settings.skip=prevSkip;forceNoSkip=false;
 }
-async function fadeToDay(loopTag){
+async function fadeToDay(){
   const prevSpeed=settings.speed,prevSkip=settings.skip;
   forceNoSkip=true;skipReq=false;settings.speed=1;settings.skip=false;
   blackout.classList.add("on"); await wait(1050);
   document.body.classList.remove("night");
-  if(loopTag==="d1_day"){ stopAllMusic(250); await startLoop(d1_morning,1200); }
-  if(loopTag==="d2_day"){ stopAllMusic(250); await startLoop(d2_morning,1200); }
   blackout.classList.remove("on"); await wait(1050);
   settings.speed=prevSpeed;settings.skip=prevSkip;forceNoSkip=false;
 }
@@ -515,7 +503,6 @@ function loadFromSnapshot(s){
   lines=Array.isArray(s.lines)?s.lines:[]; cur=String(s.cur||"");
   phaseNum.textContent=String(state.phase>=3?3:state.phase>=2?2:1);
   render();
-  // restore day/night visual + correct music based on current scene bgm
   if(sceneId && SCENES[sceneId]) applyBgm(SCENES[sceneId],true);
   return true;
 }
@@ -539,7 +526,6 @@ btnSave.onclick=()=>{
 btnLoad.onclick=()=>{ if(loadSave()){settingsNote.textContent="loaded. resuming…"; closeSettings(); enqueue(()=>goto(sceneId||"field_entry"))}else settingsNote.textContent="no save found."; };
 btnClear.onclick=()=>{
   clearSave();
-  // reset run-only state too
   state={
     phase:1,
     name:localStorage.getItem("aot_cadet_name")||"",
@@ -708,7 +694,7 @@ p3_morning_prepare_2:{bgm:"d1_day",text:()=>[
   {k:"C",label:"Go to training.",fx:{},next:"p3_afternoon_entry"}
 ]},
 
-/* Mira / Steve / Nat (day 1) unchanged-ish but compacted for space */
+/* Mira / Steve / Nat (day 1) */
 p3_mira_talk:{bgm:"d1_day",text:()=>[
   "Mira doesn’t move much when you come closer.","But she makes space anyway.","",
   N("Mira","First day always feels wrong."),
@@ -931,7 +917,7 @@ p3_night_end:{bgm:"d1_night",text:()=>[
   "",
   PICK("End of Phase 3 — Day 1 (night).")
 ],title:"sleep",choices:[
-  {k:"A",label:"Sleep.",fx:{},next:"__DAY2__"}
+  {k:"A",label:"Sleep.",fx:{},next:"__P3_CONTINUE_DAY2__"}
 ]},
 
 /* ===== DAY 2 ENTRY / MORNING WAKE ROUTING ===== */
@@ -1127,37 +1113,67 @@ p3_d2_evening_ms:{bgm:"d2_eve",text:()=>[
   {k:"C",label:"Follow the ‘bread’ idea.",fx:{warnFlawless:1,flag:"d2_bread_attempt"},next:"p3_d2_evening_ms_bread"}
 ]},
 p3_d2_evening_ms_laundry:{bgm:"d2_eve",text:()=>[
-  "You scrub until your fingers go numb.",
-  "The work is stupidly grounding.",
-  "",
-  "Mira hums something under her breath.. barely audible.",
-  "Not a song you recognize. Just… a pattern.",
-  "",
-  N("Mira","It helps."),
-  N("Mira","If you give your head something small to hold."),
-  "",
-  "Steve wrings out a shirt too hard and water splashes his face.",
-  N("Steve","I’m being attacked."),
-  "Mira giggles. A real one.",
-  "",
-  "For a second, the Trainee Corps doesn’t feel like a trap."
+ "You scrub until your fingers go numb.",
+"The work is stupidly grounding.",
+"",
+"The cold water bites at your skin.",
+"It hurts just enough to keep you present.",
+"",
+"Mira hums something under her breath… barely audible.",
+"Not a song you recognize.",
+"Just… a pattern she keeps returning to.",
+"",
+N("Mira","It helps."),
+N("Mira","If you give your head something small to hold."),
+"",
+"Steve wrings out a shirt too hard and water splashes his face.",
+"He jerks back like he’s been attacked.",
+N("Steve","Hey-! I’m being assaulted."),
+"",
+"Mira giggles.",
+"A real one.",
+"Quick, surprised, like it escaped by accident.",
+"",
+"Steve freezes for half a second.",
+"Like he’s afraid to scare it away.",
+"",
+"For a moment, nobody talks.",
+"The sound of water fills the space.",
+"",
+"For a second, the Trainee Corps doesn’t feel like a trap."
 ],title:"next",choices:[
   {k:"A",label:"Head back inside together.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1}},next:"p3_d2_night_hub"}
 ]},
 p3_d2_evening_ms_name:{bgm:"d2_eve",text:()=>[
   "Steve keeps glancing away like the name still embarrasses him.",
-  "",
-  N("Steve","It’s not even funny."),
-  N("Steve","My dad thought it was funny."),
-  N("Steve","He said, ‘If you’re gonna be scared, at least have a name people remember.’"),
-  "",
-  "Mira’s eyes soften.",
-  N("Mira","It’s a good name...?"),
-  "Steve blinks at that like it hit him harder than a punch.",
-  "",
-  N("Steve","…Thanks."),
-  "His voice goes small for one second.",
-  "Then he clears his throat and tries to be normal again."
+"Like saying it out loud made it heavier.",
+"",
+N("Steve","It’s not even funny."),
+N("Steve","My dad thought it was hilarious."),
+"",
+N("Steve","He said, ‘If you’re gonna be scared of dying--"),
+N("Steve","at least have a name people remember.’"),
+"",
+"He shrugs like it doesn’t matter.",
+"It absolutely does.",
+"",
+"Mira’s eyes soften.",
+"She doesn’t rush to fill the silence.",
+"",
+N("Mira","It’s a good name… Steve.. the Carrot."),
+N("Mira","I think it suits you."),
+"",
+"Steve blinks at that.",
+"Like the words hit harder than he expected.",
+"",
+N("Steve","…Thanks."),
+"",
+"His voice goes small for one second.",
+"Then he clears his throat.",
+"Straightening his shoulders..",
+"",
+"He puts the mask back on.",
+"But slower this time."
 ],title:"next",choices:[
   {k:"A",label:"\"I’ll remember it.\" (simple)",fx:{rel:{k:"steve",d:+2}},next:"p3_d2_night_hub"},
   {k:"B",label:"\"You don’t have to joke all the time.\" ",fx:{rel:{k:"steve",d:+2},flag:"d2_steve_seen"},next:"p3_d2_night_hub"}
@@ -1377,17 +1393,11 @@ p3_d2_end:{end:true,bgm:"d2_night",text:()=>[
 ]}
 };
 
-/* ===== music router (now day-aware) ===== */
-/* FIX: make this GLOBAL so applyBgm can read it */
-let currentBgmTag = null;
+/* ===== music router (global tag; do NOT reset in goto) ===== */
+let currentBgmTag=null;
 
 function ensureLoop(loop, ms=1200){
-  // if already on, don't restart (no cuts)
-  if(loop.on){
-    // if volume got lowered, gently bring it back
-    fade(loop, loop.target, ms);
-    return;
-  }
+  if(loop.on){ fade(loop, loop.target, ms); return; }
   startLoop(loop, ms);
 }
 
@@ -1395,7 +1405,6 @@ function applyBgm(scene, force=false){
   const tag = scene && scene.bgm;
   if(!tag) return;
 
-  // Don't restart same tag unless forced
   if(!force && currentBgmTag === tag) return;
   currentBgmTag = tag;
 
@@ -1404,7 +1413,6 @@ function applyBgm(scene, force=false){
     return;
   }
 
-  // Only stop other tracks when tag actually changes
   stopAllMusic(250);
 
   if(tag==="d1_day"){ document.body.classList.remove("night"); ensureLoop(d1_morning,1200); }
@@ -1436,7 +1444,6 @@ function renderChoices(scene){
     if(statsModal.classList.contains("show")) return;
     if(locked||modal.classList.contains("show")) return;
 
-    // >>> KEY FIX: don't fire choice hotkeys while typing in input <<<
     const ae=document.activeElement;
     if(ae===inp || (ae && (ae.tagName==="INPUT"||ae.tagName==="TEXTAREA"||ae.isContentEditable))) return;
 
@@ -1482,7 +1489,6 @@ async function runDeath(scene){
 
 /* navigation */
 async function goto(id){
-  // special routing nodes
   if(id==="__ROUTE_WAKE__"){
     if(hasFlag("sat_ms")) id="p3_d2_morning_ms_wake";
     else if(hasFlag("sat_nat")) id="p3_d2_morning_nat_wake";
@@ -1500,7 +1506,6 @@ async function goto(id){
 
   setBlood(0); setVignette(0); hideAllBoxes();
 
-  /* FIX: removed the broken local 'let currentBgmTag = null;' */
   applyBgm(scene);
 
   const prevForce=forceNoSkip,prevSkip=settings.skip,prevSpeed=settings.speed;
@@ -1538,16 +1543,18 @@ function pick(i){
 
     if(c.next==="__NIGHT_D1__"){
       await wait(650);
-      await fadeToNight("d1_night");
-      await goto("p3_night_cafeteria_intro");
+      await fadeToNight();                 // visuals only
+      await goto("p3_night_cafeteria_intro"); // scene bgm starts d1_night
       return;
     }
-    if(c.next==="__DAY2__"){
-      state.day=2;
-      await wait(650);
-      // force reset from night -> day2 morning
-      await fadeToDay("d2_day");
-      await goto("p3_d2_entry");
+
+    if(c.next==="__P3_CONTINUE_DAY2__"){
+      setRisk(false);
+      setStatus("LOGGED");
+      showStatus("status","logged","Phase 3 — Day 1 complete.\nType: continue");
+      state.phase = 3.25;
+      showText("type: continue","awaiting");
+      locked=false;
       return;
     }
 
@@ -1616,6 +1623,17 @@ send.addEventListener("click",()=>{
     if(v.toLowerCase()!=="continue"){enqueue(()=>say(["","Command rejected.","Type: continue"]));return}
     lockText("loading");
     enqueue(async()=>{ await say(["","Acknowledged.","Proceeding to trainee corps…",""]); await enterPhase3(); });
+    return;
+  }
+  if(state.phase===3.25){
+    if(v.toLowerCase()!=="continue"){enqueue(()=>say(["","Command rejected.","Type: continue"]));return}
+    lockText("loading");
+    enqueue(async()=>{
+      await say(["","Acknowledged.","Proceeding to Phase 3 — Day 2…",""]);
+      state.day=2;
+      await fadeToDay();       // visuals only
+      await goto("p3_d2_entry"); // scene bgm starts d2_day
+    });
     return;
   }
 });
