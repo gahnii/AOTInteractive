@@ -1276,6 +1276,20 @@ p3_d2_evening_nat_tasks:{bgm:"d2_eve",text:()=>[
   {k:"B",label:"Leave before it gets personal.",fx:{warnFlawless:1},next:"p3_d2_night_hub"}
 ]},
 
+p3_d2_night_branch_talk:{bgm:"d2_night",text:()=>[
+  "Nat sits on the crate.. like he owns the quiet.",
+  "",
+  "For a while, he says nothing.",
+  "Like he's deciding if you earned the next sentence.",
+  "",
+  N("Nat","Question."),
+  N("Nat","What branch are you interested in joining?")
+],title:"choose branch",choices:[
+  {k:"A",label:"Scouting Legion.",fx:{flag:"branch_sl"},next:"p3_d2_night_nat_sl"},
+  {k:"B",label:"Stationary Guard.",fx:{flag:"branch_garrison"},next:"p3_d2_night_nat_gar"},
+  {k:"C",label:"Military Police.",fx:{flag:"branch_mp"},next:"p3_d2_night_nat_mp"}
+]},
+
 p3_d2_evening_normal:{bgm:"d2_eve",text:()=>[
   "You do the assigned work.",
   "Quietly. Efficiently.",
