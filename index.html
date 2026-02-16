@@ -439,7 +439,16 @@ function applyFx(fx){
   state.fear=clamp(state.fear,0,9); state.hesitation=clamp(state.hesitation,0,9);
   if(fx.flag) setFlag(fx.flag,true);
   if(fx.unflag) setFlag(fx.unflag,false);
+
+  /* relationship deltas (single OR multiple) */
   if(fx.rel) relAdd(fx.rel.k,Number(fx.rel.d||0));
+  if(fx.rels && Array.isArray(fx.rels)){
+    for(const r of fx.rels){
+      if(!r || !r.k) continue;
+      relAdd(r.k, Number(r.d||0));
+    }
+  }
+
   if(fx.setPath) setPath(fx.setPath.k,fx.setPath.v);
   if(fx.warnFlawless){ state.flawlessWarn = clamp((state.flawlessWarn|0) + Number(fx.warnFlawless||1), 0, 2); }
   if(fx.breakFlawless){ state.flawless=false; state.flawlessWarn = 2; }
@@ -470,8 +479,36 @@ async function fadeToDay(){
   settings.speed=prevSpeed;settings.skip=prevSkip;forceNoSkip=false;
 }
 
-/* ===== SAVE SLOT (single) + AUTOSAVE GATE ===== */
+/* ===== SAVESLOT(single) + AUTOSAVE GATE ===== */
 const SAVEKEY="aot_save_v1";
+/* ===== PHAS 4TRANSFER (to separate page) ===== */
+const P4_URL = "phase4.html";                 // <- your next page filename
+const P4_TRANSFER_KEY = "aot_p4_transfer_v1"; // one-time handoff blob
+const P4_TRANSFER_SIG = "aot_p4_transfer_sig_v1"; // prevents stale reuse
+
+function handoffToPhase4(){
+  // wat phase 4 needs
+  const payload = {
+    v: 1,
+    t: Date.now(),
+    from: "phase3",
+    state: JSON.parse(JSON.stringify(state)),
+    settings: JSON.parse(JSON.stringify(settings)),
+    // 
+    // lines
+  };
+
+  try{
+    localStorage.setItem(P4_TRANSFER_KEY, JSON.stringify(payload));
+    localStorage.setItem(P4_TRANSFER_SIG, String(payload.t));
+  }catch(e){
+    // if storage fails, phase 4 fresh
+  }
+
+  // go to the Phase 4 page
+  location.href = P4_URL;
+}
+
 const MANUAL_LOCK_KEY="aot_manual_save_lock_v1";
 let lastAutoScene=null;
 
@@ -859,7 +896,7 @@ p3_night_table_ms:{bgm:"d1_night",text:()=>[
   N("Mira","…Ignore him."),"",
   "For a minute, the stew isn’t disgusting.","Or maybe you just stop noticing."
 ],title:"you say",choices:[
-  {k:"1",label:"\"I’m glad I’m not alone here.\"",fx:{rel:{k:"mira",d:+2},rel:{k:"steve",d:+1},flag:"night_bond"},next:"p3_night_ms_bond"},
+  {k:"1",label:"\"I’m glad I’m not alone here.\"",fx:{rels:[{k:"mira",d:+2},{k:"steve",d:+1}],flag:"night_bond"},next:"p3_night_ms_bond"},
   {k:"2",label:"\"Tell me something normal.\"",fx:{rel:{k:"steve",d:+2}},next:"p3_night_ms_normal"}
 ]},
 p3_night_ms_bond:{bgm:"d1_night",text:()=>[
@@ -881,7 +918,7 @@ p3_night_ms_normal:{bgm:"d1_night",text:()=>[
   "","The air loosens. Just a little."
 ],title:"you do",choices:[
   {k:"A",label:"Laugh once. Let it count.",fx:{rel:{k:"steve",d:+1}},next:"p3_night_end"},
-  {k:"B",label:"Stay. Don’t rush the quiet.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1}},next:"p3_night_end"}
+  {k:"B",label:"Stay. Don’t rush the quiet.",fx:{rels:[{k:"mira",d:+1},{k:"steve",d:+1}]},next:"p3_night_end"}
 ]},
 p3_night_table_nat:{bgm:"d1_night",text:()=>[
   "Nat doesn’t look up when you approach.","But he doesn’t tell you to leave.","",
@@ -907,7 +944,7 @@ p3_night_alone:{bgm:"d1_night",text:()=>[
   "Your spoon scrapes the bowl.","The sound is louder than it should be."
 ],title:"you do",choices:[
   {k:"A",label:"Finish and leave.",fx:{},next:"p3_night_end"},
-  {k:"B",label:"Go sit with Mira & Steve after all.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1},flag:"sat_ms"},next:"p3_night_table_ms"}
+  {k:"B",label:"Go sit with Mira & Steve after all.",fx:{rels:[{k:"mira",d:+1},{k:"steve",d:+1}],flag:"sat_ms"},next:"p3_night_table_ms"}
 ]},
 p3_night_end:{bgm:"d1_night",text:()=>[
   "Night settles in layers.",
@@ -949,7 +986,7 @@ p3_d2_morning_ms_wake:{bgm:"d2_day",text:()=>[
   "He waits for the reaction like it might kill him.",
   "Mira covers a smile with her sleeve."
 ],title:"you reply",choices:[
-  {k:"A",label:"\"I won’t laugh.\" (soft)",fx:{rel:{k:"steve",d:+2},rel:{k:"mira",d:+1},flag:"learned_steve_fullname"},next:"p3_d2_morning_ms_after"},
+  {k:"A",label:"\"I won’t laugh.\" (soft)",fx:{rels:[{k:"steve",d:+2},{k:"mira",d:+1}],flag:"learned_steve_fullname"},next:"p3_d2_morning_ms_after"},
   {k:"B",label:"\"Steve… Carrot?\" (repeat it)",fx:{rel:{k:"steve",d:+1}},next:"p3_d2_morning_ms_after"},
   {k:"C",label:"Laugh once anyway.",fx:{warnFlawless:1,rel:{k:"steve",d:-1}},next:"p3_d2_morning_ms_after"}
 ]},
@@ -1009,7 +1046,7 @@ p3_d2_morning_hub:{bgm:"d2_day",text:()=>[
   "",
   "The yard waits like a mouth."
 ],title:"morning choice",choices:[
-  {k:"A",label:"Stick with Mira & Steve.",req:{flag:"d2_morning_with_ms"},fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1}},next:"p3_d2_morning_ms_activity"},
+  {k:"A",label:"Stick with Mira & Steve.",req:{flag:"d2_morning_with_ms"},fx:{rels:[{k:"mira",d:+1},{k:"steve",d:+1}]},next:"p3_d2_morning_ms_activity"},
   {k:"B",label:"Shadow Nat’s pace.",req:{flag:"sat_nat"},fx:{rel:{k:"nat",d:+1}},next:"p3_d2_morning_nat_activity"},
   {k:"C",label:"Do the morning alone.",fx:{warnFlawless:1},next:"p3_d2_morning_solo"}
 ]},
@@ -1108,7 +1145,7 @@ p3_d2_evening_ms:{bgm:"d2_eve",text:()=>[
   "Steve lifts his hands. Innocent.",
   N("Steve","I said SOMETIMES.")
 ],title:"you respond",choices:[
-  {k:"A",label:"Help with the laundry. Keep it calm.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1}},next:"p3_d2_evening_ms_laundry"},
+  {k:"A",label:"Help with the laundry. Keep it calm.",fx:{rels:[{k:"mira",d:+1},{k:"steve",d:+1}]},next:"p3_d2_evening_ms_laundry"},
   {k:"B",label:"Ask about Steve’s name again.",fx:{rel:{k:"steve",d:+2}},next:"p3_d2_evening_ms_name"},
   {k:"C",label:"Follow the ‘bread’ idea.",fx:{warnFlawless:1,flag:"d2_bread_attempt"},next:"p3_d2_evening_ms_bread"}
 ]},
@@ -1142,7 +1179,7 @@ N("Steve","Hey-! I’m being assaulted."),
 "",
 "For a second, the Trainee Corps doesn’t feel like a trap."
 ],title:"next",choices:[
-  {k:"A",label:"Head back inside together.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+1}},next:"p3_d2_night_hub"}
+  {k:"A",label:"Head back inside together.",fx:{rels:[{k:"mira",d:+1},{k:"steve",d:+1}]},next:"p3_d2_night_hub"}
 ]},
 p3_d2_evening_ms_name:{bgm:"d2_eve",text:()=>[
   "Steve keeps glancing away like the name still embarrasses him.",
@@ -1267,23 +1304,26 @@ p3_d2_evening_nat_tasks:{bgm:"d2_eve",text:()=>[
   "You run until your lungs feel thin.",
   "You come back with your throat burning.",
   "",
-  "Nat nods like he expected it.",
+    "Nat nods like he expected it.",
   N("Nat","Good."),
   "",
-  "He sits on the crate.. like he owns the quiet."
+  "He claims the crate like it’s assigned to him.",
+  "The quiet around it feels owned."
 ],title:"evening talk",choices:[
-  {k:"A",label:"Sit. Hear him out.",fx:{rel:{k:"nat",d:+1}},next:"p3_d2_night_branch_talk"},
-  {k:"B",label:"Leave before it gets personal.",fx:{warnFlawless:1},next:"p3_d2_night_hub"}
+  {k:"A",label:"Sit with him. Let him speak.",fx:{rel:{k:"nat",d:+1}},next:"p3_d2_night_branch_talk"},
+  {k:"B",label:"Leave before it turns personal.",fx:{warnFlawless:1},next:"p3_d2_night_hub"}
 ]},
 
 p3_d2_night_branch_talk:{bgm:"d2_night",text:()=>[
-  "Nat sits on the crate.. like he owns the quiet.",
+  "You sit on the edge of the crate’s shadow.",
+  "Nat doesn’t shift to make room-- he just allows it.",
   "",
   "For a while, he says nothing.",
-  "Like he's deciding if you earned the next sentence.",
+  "Not hesitation. Assessment.",
   "",
   N("Nat","Question."),
   N("Nat","What branch are you interested in joining?")
+
 ],title:"choose branch",choices:[
   {k:"A",label:"Scouting Legion.",fx:{flag:"branch_sl"},next:"p3_d2_night_nat_sl"},
   {k:"B",label:"Stationary Guard.",fx:{flag:"branch_garrison"},next:"p3_d2_night_nat_gar"},
@@ -1327,7 +1367,7 @@ p3_d2_night_ms:{bgm:"d2_night",text:()=>[
   "Steve grins.",
   N("Steve","Pillow fight. Winner gets the good corner of the mattress!")
 ],title:"you choose",choices:[
-  {k:"A",label:"Join the pillow fight.",fx:{rel:{k:"mira",d:+1},rel:{k:"steve",d:+2},flag:"d2_pillowfight"},next:"p3_d2_night_ms_pillow"},
+  {k:"A",label:"Join the pillow fight.",fx:{rels:[{k:"mira",d:+1},{k:"steve",d:+2}],flag:"d2_pillowfight"},next:"p3_d2_night_ms_pillow"},
   {k:"B",label:"Stay close, just watch.",fx:{rel:{k:"mira",d:+1}},next:"p3_d2_end"}
 ]},
 p3_d2_night_ms_pillow:{bgm:"d2_night",text:()=>[
@@ -1395,7 +1435,12 @@ p3_d2_night_nat_mp:{bgm:"d2_night",text:()=>[
   N("Nat","But I’ll follow you there…"),
   N("Nat","If we both make it."),
   "",
-  "For once, the ambition sounds like a promise, not a dare."
+  "",
+"He stands first.",
+"The quiet goes with him.",
+"",
+"Lights are already dimming when you reach your bunk.",
+"For once, the ambition sounds like a promise, not a dare."
 ],title:"sleep",choices:[{k:"A",label:"Sleep.",fx:{rel:{k:"nat",d:+2}},next:"p3_d2_end"}]},
 
 p3_d2_end:{end:true,bgm:"d2_night",text:()=>[
@@ -1650,6 +1695,16 @@ send.addEventListener("click",()=>{
     });
     return;
   }
+    if(state.phase===3.75){
+    if(v.toLowerCase()!=="continue"){enqueue(()=>say(["","Command rejected.","Type: continue"]));return}
+    lockText("loading");
+    enqueue(async()=>{
+      await say(["","Acknowledged.","Transferring to Phase 4…",""]);
+      handoffToPhase4();
+    });
+    return;
+  }
+
 });
 inp.addEventListener("keydown",e=>{ if(e.key==="Enter") send.click(); });
 
@@ -1658,11 +1713,23 @@ const _goto=goto;
 goto=async function(id){
   await _goto(id);
   const scene=SCENES[id];
+
+  // phase 2 -> phase 3 continue (unchanged)
   if(scene && scene.end && state.phase===2){
     showStatus("status","logged","Phase 2 complete.\nType: continue");
     state.phase=2.5;
     showText("type: continue","awaiting");
     locked=false;
+    return;
+  }
+
+  // phase 3 Day 2 end -> phase 4 continue 
+  if(id==="p3_d2_end" && scene && scene.end){
+    showStatus("status","logged","Phase 3 complete.\nType: continue");
+    state.phase = 3.75; // a holding phase value, only used on this page
+    showText("type: continue","awaiting");
+    locked=false;
+    return;
   }
 };
 
