@@ -1,0 +1,1756 @@
+<!doctype html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>104th Cadet Evaluation — Phase 4</title>
+<style>
+:root{--ink:#1f2b2a;--accent:#6b1f1f;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Courier New",monospace}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;overflow:hidden;color:var(--ink);font-family:var(--mono)}
+.bg{position:fixed;inset:0;background:url("parchment.jpg") center/cover no-repeat;transition:filter 1.2s ease}
+.bg:after{content:"";position:absolute;inset:0;background:
+radial-gradient(900px 520px at 50% 45%,transparent 55%,rgba(0,0,0,.22)),
+radial-gradient(1200px 900px at 50% 50%,transparent 60%,rgba(0,0,0,.18));
+opacity:.35;transition:opacity 1.2s ease}
+body.night .bg{filter:brightness(.42) saturate(.85) contrast(1.05)}
+body.night .bg:after{opacity:.55}
+
+.blood{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .7s ease}
+.blood img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.2) contrast(1.05)}
+.vignette{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .7s ease;background:radial-gradient(800px 520px at 50% 45%,transparent 55%,rgba(0,0,0,.55),rgba(0,0,0,.78))}
+.blackout{position:fixed;inset:0;background:#07080b;opacity:0;pointer-events:none;transition:opacity 1.1s ease;z-index:40}
+.blackout.on{opacity:1}
+
+.top{position:fixed;left:0;right:0;top:0;display:flex;justify-content:space-between;gap:12px;padding:18px 28px;pointer-events:none;z-index:5}
+.h1{font-weight:800;letter-spacing:.6px;text-transform:uppercase;font-size:18px}
+.sub{opacity:.75;font-size:12px;margin-top:6px}
+.stamp{font-size:12px;text-align:right;border:1px dashed rgba(0,0,0,.28);border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.18)}
+.stamp b{color:var(--accent)}
+.settingsBtn{pointer-events:auto;align-self:flex-start;margin-left:12px;width:34px;height:34px;border-radius:12px;border:1px solid rgba(0,0,0,.22);background:rgba(255,255,255,.18);cursor:pointer;font:16px var(--mono);display:grid;place-items:center}
+.settingsBtn:active{transform:translateY(1px)}
+
+.wrap{position:relative;height:100%;display:grid;align-items:center;padding:90px 28px 190px}
+.text{max-width:920px;font-size:16px;line-height:1.95;margin:0 auto}
+.caret{display:inline-block;width:9px;height:18px;vertical-align:-3px;margin-left:4px;background:rgba(31,43,42,.65);animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.hint{font-size:12px;opacity:.65;margin-top:10px}
+
+.bottom{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(920px,92vw);padding:18px 0 22px;display:grid;gap:12px;justify-items:stretch;z-index:6}
+.box{border:1px solid rgba(0,0,0,.22);border-radius:10px;background:rgba(255,255,255,.08);backdrop-filter:blur(2px);padding:12px 14px}
+.label{opacity:.8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;display:flex;justify-content:space-between;gap:12px}
+.pill{border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:2px 8px;font-size:11px;opacity:.75}
+.row{display:flex;gap:10px;align-items:center}
+input{flex:1;font:16px var(--mono);border:0;outline:0;background:transparent;color:var(--ink)}
+.btn{font:12px var(--mono);text-transform:uppercase;padding:10px 12px;border-radius:10px;border:1px solid rgba(0,0,0,.22);background:rgba(255,255,255,.18);cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.hidden{display:none}
+
+#out .ln{display:block;white-space:pre-wrap}
+#out .dim{opacity:.35}
+#out .fade{opacity:.18}
+#out .who{font-weight:900}
+#out .pick{color:var(--accent);font-weight:800}
+
+.choices{display:grid;grid-template-columns:1fr;gap:10px}
+.choice{text-align:left}
+
+.modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.25);backdrop-filter:blur(2px);z-index:50}
+.modal.show{display:grid}
+.panel{width:min(560px,92vw);border:1px solid rgba(0,0,0,.22);border-radius:14px;background:rgba(255,255,255,.16);padding:14px 14px 12px;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+.panel h2{margin:0 0 10px;font:800 14px var(--mono);letter-spacing:.6px;text-transform:uppercase;display:flex;justify-content:space-between;gap:12px}
+.close{font:12px var(--mono);text-transform:uppercase;padding:8px 10px;border-radius:10px;border:1px solid rgba(0,0,0,.22);background:rgba(255,255,255,.18);cursor:pointer}
+.opt{display:grid;gap:10px}
+.row2{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 10px;border-radius:12px;border:1px solid rgba(0,0,0,.18);background:rgba(255,255,255,.10)}
+.row2 small{opacity:.7;display:block;margin-top:4px;line-height:1.35}
+.sel{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.chip{font:12px var(--mono);padding:7px 10px;border-radius:999px;border:1px solid rgba(0,0,0,.20);background:rgba(255,255,255,.14);cursor:pointer}
+.chip.on{border-color:rgba(107,31,31,.55);background:rgba(107,31,31,.12)}
+.tog{display:flex;gap:10px;align-items:center}
+.tog input{width:18px;height:18px}
+.note{opacity:.75;font-size:12px;line-height:1.5;margin-top:10px}
+
+/* ===== STATS MODAL ===== */
+.statsGrid{display:grid;gap:10px}
+.statRow{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 10px;border-radius:12px;border:1px solid rgba(0,0,0,.18);
+  background:rgba(255,255,255,.10)
+}
+.statRow .k{font-weight:900;text-transform:uppercase;letter-spacing:.4px;font-size:12px;opacity:.85}
+.statRow .v{font-weight:900}
+.statRow small{display:block;opacity:.7;font-weight:400;line-height:1.35;margin-top:4px}
+.badge{border:1px solid rgba(0,0,0,.18);border-radius:999px;padding:4px 10px;font-size:12px;background:rgba(255,255,255,.12)}
+.badge.clean{border-color:rgba(0,0,0,.18)}
+.badge.updated{border-color:rgba(107,31,31,.38);background:rgba(107,31,31,.08)}
+.badge.flagged{border-color:rgba(107,31,31,.62);background:rgba(107,31,31,.12)}
+
+/* ===== SKILLCHECK ===== */
+.skillModal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.35);backdrop-filter:blur(2px);z-index:80}
+.skillModal.show{display:grid}
+.skillPanel{width:min(620px,92vw);border:1px solid rgba(0,0,0,.22);border-radius:16px;background:rgba(255,255,255,.18);padding:14px 14px 14px;box-shadow:0 20px 70px rgba(0,0,0,.25)}
+.skillTop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}
+.skillTitle{font:900 13px var(--mono);letter-spacing:.6px;text-transform:uppercase}
+.skillDesc{opacity:.8;font-size:12px;line-height:1.4;margin-top:6px}
+.skillBar{position:relative;height:22px;border-radius:999px;border:1px solid rgba(0,0,0,.22);background:rgba(255,255,255,.12);overflow:hidden}
+.skillZone{position:absolute;top:0;bottom:0;border-radius:999px;background:rgba(107,31,31,.18);border:1px solid rgba(107,31,31,.35)}
+.skillNeedle{position:absolute;top:-6px;width:14px;height:34px;border-radius:10px;border:1px solid rgba(0,0,0,.25);background:rgba(255,255,255,.22);backdrop-filter:blur(2px)}
+.skillBtns{display:flex;gap:10px;margin-top:12px}
+.skillBtn{flex:1;font:12px var(--mono);text-transform:uppercase;padding:12px 12px;border-radius:12px;border:1px solid rgba(0,0,0,.22);background:rgba(255,255,255,.18);cursor:pointer}
+.skillBtn:active{transform:translateY(1px)}
+.skillHint{opacity:.7;font-size:12px;margin-top:10px;line-height:1.45}
+@media (prefers-reduced-motion:reduce){
+  .caret{animation:none}.blood,.vignette,.bg,.blackout{transition:none}
+}
+</style></head><body>
+<div class="bg"></div>
+<div class="blood" id="blood"><img src="blood.png" alt=""></div>
+<div class="vignette" id="vignette"></div>
+<div class="blackout" id="blackout"></div>
+
+<header class="top">
+  <div>
+    <div class="h1">104th Cadet Corps — Evaluation Program</div>
+    <div class="sub">Branch Attachment • Phase <span id="phaseNum">4</span></div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:flex-start">
+    <button class="settingsBtn" id="openSettings" title="Settings" aria-label="Settings">⚙</button>
+    <button class="settingsBtn" id="openStats" title="Stats" aria-label="Stats">☰</button>
+    <div class="stamp">FILE: <b>#104-ATTACH</b><br>STATUS: <b id="status">RECORDING</b></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="text">
+    <span id="out"></span><span class="caret"></span>
+    <div class="hint" id="hint">loading transfer…</div>
+  </div>
+</main>
+
+<footer class="bottom">
+  <div class="box hidden" id="boxStatus">
+    <div class="label"><span id="statusTitle">status</span><span class="pill" id="statusPill">locked</span></div>
+    <div id="statusText" style="font-size:14px;opacity:.9;line-height:1.6"></div>
+  </div>
+
+  <div class="box hidden" id="boxText">
+    <div class="label"><span id="prompt">your response</span><span class="pill" id="mode">locked</span></div>
+    <div class="row">
+      <input id="inp" maxlength="80" autocomplete="off" disabled>
+      <button class="btn" id="send" disabled>send</button>
+    </div>
+  </div>
+
+  <div class="box hidden" id="boxChoice">
+    <div class="label"><span id="choiceTitle">action</span><span class="pill" id="choiceMode">phase 4</span></div>
+    <div class="choices" id="choices"></div>
+  </div>
+</footer>
+
+<div class="modal" id="settingsModal" aria-hidden="true">
+  <div class="panel" role="dialog" aria-modal="true" aria-label="Settings">
+    <h2><span>Settings</span><button class="close" id="closeSettings">close</button></h2>
+    <div class="opt">
+      <div class="row2">
+        <div><div style="font-weight:900">text speed</div><small>affects typing speed + pauses.</small></div>
+        <div class="sel" id="speedSel"></div>
+      </div>
+
+      <div class="row2 hidden" id="skipRow">
+        <div><div style="font-weight:900">skip typing</div><small>double-tap click / space / enter to finish the current line.</small></div>
+        <label class="tog"><input type="checkbox" id="skipToggle"><span style="opacity:.85">enabled</span></label>
+      </div>
+
+      <div class="row2">
+        <div><div style="font-weight:900">save slot</div><small>single slot. autosaves on milestones.</small></div>
+        <div class="sel">
+          <button class="chip" id="btnSave" type="button">save</button>
+          <button class="chip" id="btnLoad" type="button">load</button>
+          <button class="chip" id="btnClear" type="button">clear</button>
+        </div>
+      </div>
+    </div>
+    <div class="note" id="settingsNote">settings loaded.</div>
+  </div>
+</div>
+
+<div class="modal" id="statsModal" aria-hidden="true">
+  <div class="panel" role="dialog" aria-modal="true" aria-label="Stats">
+    <h2>
+      <span>Cadet Evaluation</span>
+      <button class="close" id="closeStats">close</button>
+    </h2>
+    <div class="statsGrid" id="statsGrid"></div>
+    <div class="note" id="statsNote"></div>
+  </div>
+</div>
+
+<div class="skillModal" id="skillModal" aria-hidden="true">
+  <div class="skillPanel" role="dialog" aria-modal="true" aria-label="Skillcheck">
+    <div class="skillTop">
+      <div>
+        <div class="skillTitle" id="skillTitle">Skillcheck</div>
+        <div class="skillDesc" id="skillDesc">Tap at the right time.</div>
+      </div>
+      <button class="close" id="skillClose" type="button">close</button>
+    </div>
+    <div class="skillBar" id="skillBar">
+      <div class="skillZone" id="skillZone"></div>
+      <div class="skillNeedle" id="skillNeedle"></div>
+    </div>
+    <div class="skillBtns">
+      <button class="skillBtn" id="skillTap" type="button">tap</button>
+    </div>
+    <div class="skillHint" id="skillHint">Mobile-friendly: you can tap anywhere on this panel too.</div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id),clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),wait=ms=>new Promise(r=>setTimeout(r,ms)),rand=(a,b)=>a+Math.random()*(b-a);
+const out=$("out"),hint=$("hint"),phaseNum=$("phaseNum"),statusEl=$("status");
+const boxText=$("boxText"),prompt=$("prompt"),mode=$("mode"),inp=$("inp"),send=$("send");
+const boxChoice=$("boxChoice"),choiceTitle=$("choiceTitle"),choiceMode=$("choiceMode"),choicesEl=$("choices");
+const blood=$("blood"),vignette=$("vignette"),blackout=$("blackout");
+const boxStatus=$("boxStatus"),statusTitle=$("statusTitle"),statusPill=$("statusPill"),statusText=$("statusText");
+
+const statsModal=$("statsModal"), openStatsBtn=$("openStats"), closeStatsBtn=$("closeStats");
+const statsGrid=$("statsGrid"), statsNote=$("statsNote");
+
+/* SKIP LOCK (shared across pages) */
+const SKIP_UNLOCK_KEY="aot_unlocked_skip_v1";
+const SKIP_UNLOCKED=(localStorage.getItem(SKIP_UNLOCK_KEY)==="1");
+
+/* settings (shared) */
+const SKEY="aot_eval_settings_v1";
+const settings=(()=>{try{return JSON.parse(localStorage.getItem(SKEY)||"{}")}catch{return{}}})();
+settings.speed=Number(settings.speed||1); if(![1,1.5,2].includes(settings.speed)) settings.speed=1;
+settings.skip = SKIP_UNLOCKED ? (typeof settings.skip==="boolean"?settings.skip:true) : false;
+const saveSettings=()=>localStorage.setItem(SKEY,JSON.stringify(settings));
+
+/* modal */
+const modal=$("settingsModal"),openBtn=$("openSettings"),closeBtn=$("closeSettings");
+const speedSel=$("speedSel"),skipToggle=$("skipToggle"),skipRow=$("skipRow"),settingsNote=$("settingsNote");
+const btnSave=$("btnSave"),btnLoad=$("btnLoad"),btnClear=$("btnClear");
+const speeds=[1,1.5,2];
+const openSettings=()=>{modal.classList.add("show");modal.setAttribute("aria-hidden","false")};
+const closeSettings=()=>{modal.classList.remove("show");modal.setAttribute("aria-hidden","true")};
+openBtn.onclick=openSettings; closeBtn.onclick=closeSettings;
+modal.addEventListener("click",e=>{if(e.target===modal) closeSettings()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&modal.classList.contains("show")) closeSettings()});
+
+function renderSettings(){
+  speedSel.innerHTML="";
+  speeds.forEach(v=>{
+    const b=document.createElement("button");
+    b.className="chip"+(settings.speed===v?" on":""); b.type="button"; b.textContent=v+"x";
+    b.onclick=()=>{settings.speed=v;saveSettings();renderSettings()};
+    speedSel.appendChild(b);
+  });
+  if(SKIP_UNLOCKED){
+    skipRow.classList.remove("hidden");
+    skipToggle.checked=!!settings.skip;
+  }else{
+    skipRow.classList.add("hidden");
+    try{skipToggle.checked=false}catch{}
+  }
+}
+skipToggle.onchange=()=>{ if(!SKIP_UNLOCKED){skipToggle.checked=false;return} settings.skip=skipToggle.checked;saveSettings(); };
+renderSettings();
+
+/* typing + render */
+const KEEP=9,DIM=2; let lines=[],cur="";
+const WHO0="\uE020",WHO1="\uE021",P0="\uE010",P1="\uE011";
+const W=t=>`${WHO0}INSTRUCTOR ENZO:${WHO1} ${t}`, PICK=t=>`${P0}${t}${P1}`;
+const N=(name,t)=>`${WHO0}${name.toUpperCase()}:${WHO1} ${t}`;
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const markup=s=>esc(s).replaceAll(WHO0,'<span class="who">').replaceAll(WHO1,"</span>").replaceAll(P0,'<span class="pick">').replaceAll(P1,"</span>");
+const render=()=>{
+  const n=lines.length,start=Math.max(0,n-(KEEP+DIM)),view=lines.slice(start);
+  out.innerHTML=view.map((l,i)=>{const age=view.length-1-i,cls=age>=KEEP+1?"fade":age>=KEEP?"dim":"";return `<span class="ln ${cls}">${markup(l)}</span>`}).join("")+(cur?`<span class="ln">${markup(cur)}</span>`:"");
+};
+const pushLine=l=>{lines.push(l);const cap=KEEP+DIM+5;if(lines.length>cap) lines=lines.slice(lines.length-cap)};
+
+let skipReq=false,lastAct=0,forceNoSkip=false;
+function requestSkip(){
+  if(!SKIP_UNLOCKED||forceNoSkip||!settings.skip) return;
+  const now=performance.now();
+  if(now-lastAct<320) skipReq=true;
+  lastAct=now;
+}
+const BASE_CM=55,BASE_CX=120,sp=()=>Math.max(.25,Number(settings.speed||1));
+let AC=null,typeBuf=null,subBuf=null,master=null,lastTick=0;
+let subSrc=null,subGain=null,subLP=null,subComp=null;
+
+async function initAudio(){
+  if(AC) return;
+  AC=new (window.AudioContext||window.webkitAudioContext)();
+  master=AC.createGain(); master.gain.value=1.25; master.connect(AC.destination);
+  const load=async url=>AC.decodeAudioData(await (await fetch(url)).arrayBuffer());
+  [typeBuf,subBuf]=await Promise.all([load("type.mp3"),load("subbass.mp3")]);
+  subGain=AC.createGain(); subLP=AC.createBiquadFilter(); subLP.type="lowpass"; subLP.frequency.value=14000; subLP.Q.value=.7;
+  subComp=AC.createDynamicsCompressor(); subComp.threshold.value=-24; subComp.knee.value=30; subComp.ratio.value=6; subComp.attack.value=.01; subComp.release.value=.2;
+  subGain.connect(subLP); subLP.connect(subComp); subComp.connect(master);
+}
+function tick(){
+  if(!AC||!typeBuf) return;
+  const t=AC.currentTime; if(t-lastTick<.03) return; lastTick=t;
+  const src=AC.createBufferSource(); src.buffer=typeBuf;
+  const len=.055,st=Math.max(0,Math.random()*(typeBuf.duration-len-.02));
+  const g=AC.createGain();
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.85,t+.006); g.gain.linearRampToValueAtTime(0,t+len);
+  src.connect(g); g.connect(master); src.start(t,st,len);
+}
+function startSubbass(){
+  if(!AC||!subBuf||subSrc) return;
+  subSrc=AC.createBufferSource(); subSrc.buffer=subBuf; subSrc.loop=true;
+  subGain.gain.value=0; subSrc.connect(subGain); subSrc.start();
+}
+function stopSubbass(fadeMs=500){
+  if(!AC||!subSrc) return;
+  const t=AC.currentTime;
+  subGain.gain.cancelScheduledValues(t);
+  subGain.gain.setValueAtTime(subGain.gain.value,t);
+  subGain.gain.linearRampToValueAtTime(0,t+fadeMs/1000);
+  const kill=subSrc; subSrc=null;
+  setTimeout(()=>{try{kill.stop()}catch{}},fadeMs+50);
+}
+function setSubbassIntensity(x,ms=200){
+  if(!AC||!subGain||!subLP) return;
+  x=clamp(x,0,1);
+  const t=AC.currentTime,d=ms/1000;
+  const gain=0.18+0.55*x,cut=14000-12000*x,qq=0.7+2.2*x;
+  subGain.gain.cancelScheduledValues(t); subGain.gain.setValueAtTime(subGain.gain.value,t); subGain.gain.linearRampToValueAtTime(gain,t+d);
+  subLP.frequency.cancelScheduledValues(t); subLP.frequency.setValueAtTime(subLP.frequency.value,t); subLP.frequency.linearRampToValueAtTime(cut,t+d);
+  subLP.Q.cancelScheduledValues(t); subLP.Q.setValueAtTime(subLP.Q.value,t); subLP.Q.linearRampToValueAtTime(qq,t+d);
+}
+
+/* simple BGM loops (Phase 4 placeholders — you can swap files later) */
+function mkLoop(src, vol = .6){
+  const a = new Audio(src);
+  a.loop = true;
+  a.preload = "auto";
+  a.volume = 0;
+  return { a, target: vol, on:false, fadeTimer:null, stopTimer:null };
+}
+function fade(loop, to = .6, ms = 1400){
+  const A = loop.a, from = A.volume || 0;
+  const steps = 24, dt = ms / steps; let i = 0;
+  if(loop.fadeTimer) clearInterval(loop.fadeTimer);
+  loop.fadeTimer = setInterval(() => {
+    i++; const p = i / steps;
+    A.volume = from + (to - from) * p;
+    if(i >= steps){ clearInterval(loop.fadeTimer); loop.fadeTimer = null; }
+  }, dt);
+}
+async function startLoop(loop, ms = 1400){
+  try{
+    if(loop.stopTimer){ clearTimeout(loop.stopTimer); loop.stopTimer=null; }
+    if(!loop.on){ loop.on=true; loop.a.volume=0; await loop.a.play(); }
+    fade(loop, loop.target, ms);
+  }catch{}
+}
+function stopLoop(loop, ms = 900){
+  if(!loop.on) return;
+  if(loop.fadeTimer){ clearInterval(loop.fadeTimer); loop.fadeTimer=null; }
+  fade(loop, 0, ms);
+  if(loop.stopTimer) clearTimeout(loop.stopTimer);
+  loop.stopTimer = setTimeout(() => { try{ loop.a.pause(); }catch{} loop.on=false; loop.stopTimer=null; }, ms + 120);
+}
+const p4_day = mkLoop("p4_day.mp3", 0.46);
+const p4_eve = mkLoop("p4_eve.mp3", 0.52);
+const p4_night = mkLoop("p4_night.mp3", 0.55);
+function stopAllMusic(ms=900){ [p4_day,p4_eve,p4_night].forEach(x=>stopLoop(x,ms)); }
+
+/* output */
+async function typeChars(str){
+  for(let i=0;i<str.length;i++){
+    if(SKIP_UNLOCKED && skipReq && !forceNoSkip){cur+=str.slice(i);skipReq=false;render();return}
+    cur+=str[i]; tick(); render();
+    await wait(rand(BASE_CM,BASE_CX)/sp());
+  }
+}
+async function typeLine(str,gap=780){
+  if(str===""){pushLine("");cur="";render();await wait(420/sp());return}
+  await typeChars(str); pushLine(cur); cur=""; render();
+  await wait(gap/sp());
+}
+async function say(arr){
+  arr=Array.isArray(arr)?arr:String(arr).split("\n");
+  for(const ln of arr) await typeLine(ln,650);
+}
+
+/* UI helpers */
+const hideAllBoxes=()=>{boxStatus.classList.add("hidden");boxText.classList.add("hidden");boxChoice.classList.add("hidden")};
+const showChoices=(title,pill)=>{hideAllBoxes();boxChoice.classList.remove("hidden");choiceTitle.textContent=title;choiceMode.textContent=pill};
+const showStatus=(title,pill,text)=>{hideAllBoxes();boxStatus.classList.remove("hidden");statusTitle.textContent=title;statusPill.textContent=pill;statusText.textContent=text||""};
+const setStatus=s=>statusEl.textContent=s;
+const clearScreen=()=>{lines=[];cur="";render()};
+const clearChoices=()=>choicesEl.innerHTML="";
+const setBlood=a=>blood.style.opacity=clamp(a,0,1),setVignette=a=>vignette.style.opacity=clamp(a,0,1);
+
+/* state */
+let started=0,locked=false,sceneId=null,q=Promise.resolve(),currentChoices=[];
+let state={
+  phase:4,
+  name:localStorage.getItem("aot_cadet_name")||"",
+  fear:0,hesitation:0,obedience:0,initiative:0,injuries:0,dead:false,
+  flags:{}, rel:{}, path:{},
+  flawless:true, flawlessWarn:0,
+  day:1
+};
+const hasFlag=k=>!!(state.flags&&state.flags[k]);
+const setFlag=(k,v=true)=>{state.flags=state.flags||{};state.flags[k]=v;};
+const relAdd=(k,d)=>{state.rel=state.rel||{};state.rel[k]=(state.rel[k]||0)+d;};
+const setPath=(k,v)=>{state.path=state.path||{};state.path[k]=v;};
+
+/* ===== BRANCH / FOLLOW HELPERS ===== */
+function chooseBranchFromPhase3Flags(){
+  const b = state?.path?.branch;
+  if(b==="sl"||b==="gar"||b==="mp") return b;
+  const b2 = state?.path?.p3Branch;
+  if(b2==="sl"||b2==="gar"||b2==="mp") return b2;
+  return null;
+}
+function currentBranch(){
+  const b = chooseBranchFromPhase3Flags();
+  if(b) return b;
+  if(hasFlag("branch_sl")) return "sl";
+  if(hasFlag("branch_garrison")) return "gar";
+  if(hasFlag("branch_mp")) return "mp";
+  return null;
+}
+function natPathActive(){
+  return !!(state?.path?.nat || state?.path?.route==="nat" || hasFlag("p3_nat") || hasFlag("nat_path"));
+}
+function natShouldFollow(branch){
+  return natPathActive() && (branch === currentBranch());
+}
+
+/* ===== STATS SYSTEM ===== */
+function fileStatus(){ if(!state.flawless) return "FLAGGED"; return (state.flawlessWarn>0) ? "UPDATED" : "CLEAN"; }
+function fileStatusDesc(){ const fs=fileStatus(); if(fs==="CLEAN") return "You're ideal."; if(fs==="UPDATED") return "Still flawless, but on the verge of losing it."; return "Flawless is broken."; }
+function badgeClass(fs){ return fs==="CLEAN"?"clean":fs==="UPDATED"?"updated":"flagged"; }
+function band(n){ n=clamp(n,0,9); if(n<=1) return "LOW"; if(n<=4) return "ELEVATED"; if(n<=7) return "HIGH"; return "CRITICAL"; }
+function renderStats(){
+  const fs=fileStatus();
+  const rows=[
+    {k:"FILE STATUS", v:fs, cls:`badge ${badgeClass(fs)}`, s:fileStatusDesc()},
+    {k:"FEAR", v:`${band(state.fear)} (${clamp(state.fear,0,9)})`, s:"Psychological stress, your mental state."},
+    {k:"HESITATION", v:`${band(state.hesitation)} (${clamp(state.hesitation,0,9)})`, s:"Cadet's response delay under pressure."},
+    {k:"OBEDIENCE", v:`${band(state.obedience)} (${clamp(state.obedience,0,9)})`, s:"Compliance with procedure."},
+    {k:"INITIATIVE", v:`${band(state.initiative)} (${clamp(state.initiative,0,9)})`, s:"Ability to act without instruction."},
+    {k:"INJURIES", v:`${clamp(state.injuries,0,9)}`, s:"Accumulated trauma markers."}
+  ];
+  statsGrid.innerHTML = rows.map(r=>`
+    <div class="statRow">
+      <div><div class="k">${r.k}</div><small>${r.s||""}</small></div>
+      <div class="${r.cls||""} v">${r.v}</div>
+    </div>
+  `).join("");
+  statsNote.textContent = (fs==="FLAGGED") ? "Record flagged for review." : "Record available. Changes are logged.";
+}
+function openStats(){ renderStats(); statsModal.classList.add("show"); statsModal.setAttribute("aria-hidden","false"); }
+function closeStats(){ statsModal.classList.remove("show"); statsModal.setAttribute("aria-hidden","true"); }
+openStatsBtn.onclick=()=>{ if(!started) return; openStats(); };
+closeStatsBtn.onclick=closeStats;
+statsModal.addEventListener("click",e=>{ if(e.target===statsModal) closeStats(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && statsModal.classList.contains("show")) closeStats(); });
+
+/* FX */
+function applyFx(fx){
+  if(!fx) return;
+  for(const k in fx) if(typeof fx[k]==="number" && typeof state[k]==="number") state[k]+=Number(fx[k]||0);
+  state.fear=clamp(state.fear,0,9); state.hesitation=clamp(state.hesitation,0,9);
+  if(fx.flag) setFlag(fx.flag,true);
+  if(fx.unflag) setFlag(fx.unflag,false);
+  if(fx.rel) relAdd(fx.rel.k,Number(fx.rel.d||0));
+  if(fx.rels && Array.isArray(fx.rels)){
+    for(const r of fx.rels){ if(!r || !r.k) continue; relAdd(r.k, Number(r.d||0)); }
+  }
+  if(fx.setPath) setPath(fx.setPath.k,fx.setPath.v);
+  if(fx.warnFlawless){ state.flawlessWarn = clamp((state.flawlessWarn|0) + Number(fx.warnFlawless||1), 0, 2); }
+  if(fx.breakFlawless){ state.flawless=false; state.flawlessWarn = 2; }
+}
+
+/* risk bed */
+function setRisk(on){
+  if(!AC) return;
+  if(on){startSubbass();setSubbassIntensity(0.35,260);setVignette(0.18)}
+  else{setSubbassIntensity(0,300);setVignette(0);stopSubbass(600)}
+}
+
+/* ===== SAVESLOT(single) + AUTOSAVE GATE ===== */
+const SAVEKEY="aot_p4_save_v1";
+const MANUAL_LOCK_KEY="aot_p4_manual_save_lock_v1";
+let lastAutoScene=null;
+function packSave(){ return { v:1, t:Date.now(), sceneId, lines,cur, state:JSON.parse(JSON.stringify(state)) }; }
+function autosaveForce(){ if(!sceneId) return; try{ localStorage.setItem(SAVEKEY,JSON.stringify(packSave())); }catch{} }
+function autosave(){
+  if(!sceneId) return;
+  const lockedByManual = localStorage.getItem(MANUAL_LOCK_KEY)==="1";
+  if(lockedByManual){ if(sceneId!==lastAutoScene){ localStorage.removeItem(MANUAL_LOCK_KEY); } else return; }
+  const scene=SCENES[sceneId];
+  const major = !!scene?.end || sceneId==="p4_entry" || sceneId==="p4_branch_select" || sceneId==="p4_night_hub";
+  if(!major) return;
+  if(sceneId===lastAutoScene) return;
+  lastAutoScene=sceneId; autosaveForce();
+}
+function loadFromSnapshot(s){
+  if(!s||!s.state) return false;
+  state=s.state; sceneId=s.sceneId;
+  lines=Array.isArray(s.lines)?s.lines:[]; cur=String(s.cur||"");
+  phaseNum.textContent="4"; render();
+  if(sceneId && SCENES[sceneId]) applyBgm(SCENES[sceneId],true);
+  return true;
+}
+function loadSave(){ try{ const raw=localStorage.getItem(SAVEKEY); if(!raw) return false; return loadFromSnapshot(JSON.parse(raw)); } catch{return false} }
+function clearSave(){ try{ localStorage.removeItem(SAVEKEY); localStorage.removeItem(MANUAL_LOCK_KEY); lastAutoScene=null; }catch{} }
+btnSave.onclick=()=>{ autosaveForce(); lastAutoScene=sceneId; localStorage.setItem(MANUAL_LOCK_KEY,"1"); settingsNote.textContent="saved to slot (phase 4)."; };
+btnLoad.onclick=()=>{ if(loadSave()){ settingsNote.textContent="loaded. resuming…"; closeSettings(); enqueue(()=>goto(sceneId||"p4_entry")); }else settingsNote.textContent="no phase 4 save found."; };
+btnClear.onclick=()=>{ clearSave(); state.phase=4; sceneId=null; lines=[]; cur=""; render(); setStatus("RECORDING"); settingsNote.textContent="phase 4 save cleared."; };
+
+/* ===== PHASE 3 -> PHASE 4 TRANSFER IMPORT ===== */
+const P4_TRANSFER_KEY="aot_p4_transfer_v1";
+const P4_TRANSFER_SIG="aot_p4_transfer_sig_v1";
+function importFromPhase3(){
+  try{
+    const raw=localStorage.getItem(P4_TRANSFER_KEY);
+    if(!raw) return false;
+    const payload=JSON.parse(raw);
+    if(!payload || !payload.state) return false;
+
+    state = payload.state;
+    state.phase = 4;
+    phaseNum.textContent = "4";
+    setStatus("RECORDING");
+
+    if(payload.settings){
+      Object.assign(settings, payload.settings);
+      try{ localStorage.setItem(SKEY, JSON.stringify(settings)); }catch{}
+      renderSettings();
+    }
+
+    localStorage.removeItem(P4_TRANSFER_KEY);
+    localStorage.removeItem(P4_TRANSFER_SIG);
+    return true;
+  }catch(e){ return false; }
+}
+
+/* ===== music router ===== */
+let currentBgmTag=null;
+function ensureLoop(loop, ms=1200){ if(loop.on){ fade(loop, loop.target, ms); return; } startLoop(loop, ms); }
+function applyBgm(scene, force=false){
+  const tag = scene && scene.bgm;
+  if(!tag) return;
+  if(!force && currentBgmTag === tag) return;
+  currentBgmTag = tag;
+
+  if(tag === "none"){ stopAllMusic(600); return; }
+  stopAllMusic(250);
+
+  if(tag==="p4_day"){ document.body.classList.remove("night"); ensureLoop(p4_day,1200); }
+  if(tag==="p4_eve"){ document.body.classList.remove("night"); ensureLoop(p4_eve,1200); }
+  if(tag==="p4_night"){ document.body.classList.add("night"); ensureLoop(p4_night,1200); }
+}
+
+/* ===== SKILLCHECK SYSTEM (reusable) ===== */
+const skillModal=$("skillModal"), skillTitle=$("skillTitle"), skillDesc=$("skillDesc"), skillBar=$("skillBar"), skillZone=$("skillZone"), skillNeedle=$("skillNeedle");
+const skillTap=$("skillTap"), skillClose=$("skillClose"), skillHint=$("skillHint");
+
+let skillRunning=false, skillRAF=null, skillT0=0, skillSpeed=0.85;
+let skillWindow={a:.50,b:.52}; // fraction [0..1]
+let skillResolve=null, skillLockedClose=false;
+let skillLatched=false; // prevents double-trigger
+
+function fear01(){
+  return clamp((state?.fear ?? 0) / 9, 0, 1); // 0..1
+}
+
+// returns [a,b] centered around `center`, with width scaling by fear
+function windowByFear({center=0.56, easyW=0.030, hardW=0.014}={}){ // smaller overall than before
+  const f = fear01();
+  const w = easyW + (hardW - easyW) * f; // fear up => width down
+  let a = center - w/2;
+  let b = center + w/2;
+  if(a < 0) { b -= a; a = 0; }
+  if(b > 1) { a -= (b-1); b = 1; }
+  a = clamp(a, 0, 1); b = clamp(b, 0, 1);
+  return [a, b];
+}
+
+function openSkillcheck({
+  title="Skillcheck",
+  desc="Tap at the right time.",
+  speed=0.85,
+  window=[.50,.52],            // can still pass explicit windows
+  useFearWindow=true,          // NEW: if true, overrides window with windowByFear()
+  fearCenter=0.56,             // NEW: center point for fear scaling
+  fearEasyW=0.030,             // NEW: fear=0 width
+  fearHardW=0.014,             // NEW: fear=9 width
+  widen=0.010,                 // NEW: smaller widen (was 0.02) so it's harder
+  hintText="Tap when the marker is inside the highlighted zone."
+}={}){
+  // reset
+  skillTitle.textContent=title;
+  skillDesc.textContent=desc;
+  skillHint.textContent=hintText;
+  skillSpeed=speed;
+
+  // apply fear-scaled window if enabled
+  const baseWin = useFearWindow
+    ? windowByFear({center:fearCenter, easyW:fearEasyW, hardW:fearHardW})
+    : window;
+
+  skillWindow={a:baseWin[0], b:baseWin[1]};
+  skillLockedClose=true;
+  skillLatched=false;
+
+  // show first so layout is real (prevents wrong widths)
+  skillModal.classList.add("show");
+  skillModal.setAttribute("aria-hidden","false");
+
+  // compute zone AFTER visible
+  requestAnimationFrame(()=>{
+    const bw=skillBar.getBoundingClientRect().width || 300;
+
+    // tighten/forgive slightly via widen (now smaller)
+    const baseA=clamp(skillWindow.a,0,1), baseB=clamp(skillWindow.b,0,1);
+    const a=clamp(baseA-widen,0,1), b=clamp(baseB+widen,0,1);
+    skillWindow={a,b};
+
+    const left=Math.round(a*bw);
+    const width=Math.max(34,Math.round((b-a)*bw)); // smaller min width (was 44)
+    skillZone.style.left=left+"px";
+    skillZone.style.width=width+"px";
+
+    // reset visuals
+    skillZone.style.background="rgba(107,31,31,.18)";
+    skillZone.style.borderColor="rgba(107,31,31,.35)";
+    skillNeedle.style.background="rgba(255,255,255,.22)";
+    skillNeedle.style.borderColor="rgba(0,0,0,.25)";
+    skillNeedle.style.left="0px";
+
+    // start anim
+    skillRunning=true;
+    skillT0=performance.now();
+    if(skillRAF) cancelAnimationFrame(skillRAF);
+
+    const tickFn=(t)=>{
+      if(!skillRunning) return;
+      const dt=(t-skillT0)/1000;
+
+      const bw2=skillBar.getBoundingClientRect().width || 300;
+      const travel=Math.max(1,bw2-14); // needle width
+      const cycle=travel*2;
+
+      // ping-pong
+      let x=(dt*skillSpeed*travel) % cycle;
+      if(x>travel) x=cycle-x;
+
+      skillNeedle.style.left=Math.round(x)+"px";
+      skillRAF=requestAnimationFrame(tickFn);
+    };
+    skillRAF=requestAnimationFrame(tickFn);
+  });
+
+  return new Promise(res=>{ skillResolve=res; });
+}
+
+function setSkillResultUI(ok){
+  skillZone.style.background = ok ? "rgba(0,160,90,.22)" : "rgba(200,30,30,.22)";
+  skillZone.style.borderColor = ok ? "rgba(0,160,90,.40)" : "rgba(200,30,30,.40)";
+  skillNeedle.style.background = ok ? "rgba(0,160,90,.18)" : "rgba(200,30,30,.18)";
+  skillNeedle.style.borderColor = ok ? "rgba(0,160,90,.35)" : "rgba(200,30,30,.35)";
+  skillDesc.textContent = ok ? "Good." : "Missed.";
+}
+
+function closeSkillcheckSmooth(ms=320){
+  skillRunning=false;
+  if(skillRAF) cancelAnimationFrame(skillRAF), skillRAF=null;
+
+  setTimeout(()=>{
+    skillModal.classList.remove("show");
+    skillModal.setAttribute("aria-hidden","true");
+    skillLockedClose=false;
+
+    // reset visuals next open
+    skillZone.style.background="rgba(107,31,31,.18)";
+    skillZone.style.borderColor="rgba(107,31,31,.35)";
+    skillNeedle.style.background="rgba(255,255,255,.22)";
+    skillNeedle.style.borderColor="rgba(0,0,0,.25)";
+  }, ms);
+}
+
+function closeSkillcheck(){
+  // immediate close (close button / escape when allowed)
+  skillRunning=false;
+  if(skillRAF) cancelAnimationFrame(skillRAF), skillRAF=null;
+
+  // Important
+  skillResolve=null;
+
+  skillModal.classList.remove("show");
+  skillModal.setAttribute("aria-hidden","true");
+  skillLockedClose=false;
+
+  // reset visuals next open
+  skillZone.style.background="rgba(107,31,31,.18)";
+  skillZone.style.borderColor="rgba(107,31,31,.35)";
+  skillNeedle.style.background="rgba(255,255,255,.22)";
+  skillNeedle.style.borderColor="rgba(0,0,0,.25)";
+}
+
+function skillTapNow(){
+  if(!skillRunning || !skillResolve || skillLatched) return;
+  skillLatched=true;
+
+  // freeze immediately
+  skillRunning=false;
+  if(skillRAF) cancelAnimationFrame(skillRAF), skillRAF=null;
+
+  const bw=skillBar.getBoundingClientRect().width || 300;
+
+  // REAL needle position at tap time:
+  const needleRect=skillNeedle.getBoundingClientRect();
+  const barRect=skillBar.getBoundingClientRect();
+
+  // use needle center relative to bar
+  const needleCenter = (needleRect.left - barRect.left) + (needleRect.width/2);
+  const frac = clamp(needleCenter / bw, 0, 1);
+
+  const ok = (frac>=skillWindow.a && frac<=skillWindow.b);
+
+  setSkillResultUI(ok);
+
+  const r=skillResolve; skillResolve=null;
+  closeSkillcheckSmooth(360);
+  r(ok);
+}
+
+/* --- Inputs --- */
+skillTap.onclick = (e)=>{ e.preventDefault(); skillTapNow(); };
+
+skillClose.onclick = (e)=>{
+  e.preventDefault();
+  if(skillLockedClose) return;
+  closeSkillcheck();
+};
+
+// click outside panel to close (only when unlocked)
+skillModal.addEventListener("click", (e)=>{
+  if(e.target===skillModal && !skillLockedClose) closeSkillcheck();
+});
+
+// tap anywhere on the PANEL (and bar) to trigger the check
+const skillPanel = skillModal.querySelector(".skillPanel");
+skillPanel.addEventListener("pointerdown",(e)=>{
+  if(!skillRunning) return;
+  if(e.target===skillClose) return;
+  e.preventDefault();
+  skillTapNow();
+},{passive:false});
+
+// also allow tapping directly on the BAR
+skillBar.addEventListener("pointerdown",(e)=>{
+  if(!skillRunning) return;
+  e.preventDefault();
+  skillTapNow();
+},{passive:false});
+
+document.addEventListener("keydown",(e)=>{
+  if(!skillModal.classList.contains("show")) return;
+  if(e.key===" "||e.key==="Enter"){ e.preventDefault(); skillTapNow(); }
+  if(e.key==="Escape" && !skillLockedClose){ closeSkillcheck(); }
+});
+
+
+
+/* ===== SCENES ===== */
+const SCENES={
+  p4_entry:{
+    bgm:"p4_day",
+    text:s=>[
+      W("Phase 4. Provisional Attachment."),
+      W("You will shadow a branch unit under supervision."),
+      "",
+      `Cadet ${s.name||"—"}. Your record remains active.`,
+      "This isn’t freedom.",
+      "It’s access.",
+      "",
+      "Orders are stamped. Names are checked twice.",
+      "People learn you by paperwork first."
+    ],
+    title:"begin",
+    choices:[
+      {k:"A",label:"Continue.",fx:{},next:"p4_route_branch"}
+    ]
+  },
+
+  p4_route_branch:{
+    bgm:"p4_day",
+    text:()=>[""],
+    title:"",
+    choices:[
+      {k:"A",label:"(route)",fx:{},next:()=> currentBranch() ? "p4_day_start" : "p4_branch_select"}
+    ]
+  },
+
+  p4_branch_select:{
+    bgm:"p4_day",
+    text:()=>[
+      "A board of attachments hangs near the gate.",
+      "Ink that doesn't dry.",
+      "",
+      "You can feel cadets reading your back.",
+      "Like your choice says all about you."
+    ],
+    title:"choose branch",
+    choices:[
+      {k:"A",label:"Scouting Legion.",fx:{flag:"branch_sl"},next:"p4_day_start"},
+      {k:"B",label:"Stationary Guard.",fx:{flag:"branch_garrison"},next:"p4_day_start"},
+      {k:"C",label:"Military Police.",fx:{flag:"branch_mp"},next:"p4_day_start"}
+    ]
+  },
+
+  p4_day_start:{
+    bgm:"p4_day",
+    text:()=>[
+      "Morning is procedural.",
+      "You’re handed a place to stand and a way to fail.",
+      "",
+      W("You will observe."),
+      W("You will not improvise."),
+      "",
+      "You’re here to learn what it costs."
+    ],
+    title:"day",
+    choices:[
+      {k:"A",label:"Proceed.",fx:{},next:"p4_day_branch"}
+    ]
+  },
+
+  /* --- DAY BRANCH CONTENT (kept) --- */
+  p4_day_branch:{
+    bgm:"p4_day",
+    text:()=>{
+      const b = currentBranch();
+      if(b==="sl"){
+        const natHere = natShouldFollow("sl");
+        return [
+          "You’re issued a cloak that smells like old rain.",
+          "Scouts don’t greet. They count.",
+          "",
+          N("Scout Maria","Better stay in formation."),
+          N("Scout Maria","If you break line, you'll become a story."),
+          "",
+          natHere ? "Nat is there. Not close. Not far. Close enough to matter." : "Mira and Steve are assigned to the same Scout attachment. You spot them between saddles.",
+          "",
+          "Outside the gate, the world looks too wide.",
+          "Grass moves.. like something underneath is breathing."
+        ];
+      }
+      if(b==="mp"){
+        const natHere = natShouldFollow("mp");
+        return [
+          "Inside Ehrmich district, the air changes.",
+          "There's less mud, and more eyes.",
+          "The rich live here, they say. The ones who run the city.",
+          "",
+          "",
+          N("Detective Oris","Hands where I can see them."),
+          N("Detective Oris","Voice measured."),
+          "",
+          natHere ? "Nat walks with you. He doesn’t look impressed. He looks awake." : "You’re alone in the line. Nobody offers you an explanation.",
+          "",
+          "A door closes nearby like it's a verdict."
+        ];
+      }
+      return [
+        "The wall is so big that it doesn't feel real, at all.",
+        "Garrison soldiers move like they’ve done the same thing for years, because they have.",
+        "",
+        N("Garrison Sergeant","Your job is boring."),
+        N("Garrison Sergeant","But boring keeps people alive."),
+        "",
+        "You’re handed a ledger, a coil of rope, and a task."
+      ];
+    },
+    title:"day action",
+    choices:[
+      {k:"A",label:"Follow procedure.",fx:{obedience:+1},next:"p4_day_choice"},
+      {k:"B",label:"Try to be noticed.",fx:{initiative:+1,warnFlawless:1},next:"p4_day_choice"}
+    ]
+  },
+
+  p4_day_choice:{
+    bgm:"p4_day",
+    text:()=>[
+      "Your hands keep doing the motions even after you stop.",
+      "That’s what scares you.",
+      "",
+      "Nobody thanks you for surviving it.",
+      "They just know that you did."
+    ],
+    title:"continue",
+    choices:[
+      {k:"A",label:"Report to evening duty.",fx:{},next:"p4_evening_hub"}
+    ]
+  },
+
+  /* --- EVENING HUB + BRANCH EVENING (kept) --- */
+  p4_evening_hub:{
+    bgm:"p4_eve",
+    text:()=>[
+      "Evening arrives and it feels like paperwork.",
+      "Not relief. It's more of.. a transition.",
+      "",
+      "You’re given more duties, not fewer.",
+      "The uniform comes off late, if anything."
+    ],
+    title:"evening",
+    choices:[
+      {k:"A",label:"Continue.",fx:{},next:"p4_evening_branch"}
+    ]
+  },
+
+  p4_evening_branch:{
+    bgm:"p4_eve",
+    text:()=>{
+      const b = currentBranch();
+      if(b==="sl"){
+        const natHere = natShouldFollow("sl");
+        return [
+          "Scouts don’t celebrate. They prepare.",
+          "Leather. Blades. Reins. Silence.",
+          "",
+          natHere ? N("Nat","Don’t get sloppy at night.") : N("Steve","We made it to evening. That counts.. right?"),
+          natHere ? "He says it like a warning, not comfort." : N("Mira","Eat. Even if you don't want to."),
+          "",
+          "The pay talk starts in the background.",
+          "Numbers that don’t match the risk.",
+          "You come to a realization.. that they barely get paid anything."
+        ];
+      }
+      if(b==="mp"){
+        const natHere = natShouldFollow("mp");
+        return [
+          "The Military Police shift changes by desk, not by sunset.",
+          "Keys. muskets and sabres. Quiet conversations that stop when you enter.",
+          "",
+          N("Detective Oris","We keep order in the walls."),
+          N("Detective Oris","That means choosing which problems get seen."),
+          "",
+          natHere ? "Nat watches the hallway doors like he expects them to open the wrong way." : "You realize you’re not being trained. You’re being tested if you're willing to do anything.",
+          "",
+          "Someone mentions a missing person like it's normal.",
+          "Nobody asks where they went.. Why?"
+        ];
+      }
+      return [
+        "Garrison evening is maintenance and alarm drills.",
+        "You learn how to tie knots until your fingers stop feeling like yours.",
+        "",
+        "A veteran keeps joking about his pay.",
+        "..But nobody laughs. Not really. Not anymore.",
+        "",
+        "You realize the Wall doesn’t end danger.",
+        "It just changes its shape."
+      ];
+    },
+    title:"evening choice",
+    choices:[
+      {
+        k:"A",label:"Keep your head down.",fx:{obedience:+1},
+        next:()=>{
+          const b=currentBranch();
+          if(b==="mp") return "p4_evening_mp_1";
+          if(b==="gar") return "p4_evening_gar_1";
+          return "p4_evening_sl_1";
+        }
+      }
+    ]
+  },
+
+  /* --- MP EVENING (kept) --- */
+  p4_evening_mp_1:{
+    bgm:"p4_eve",
+    text:()=>{
+      const natHere = natShouldFollow("mp");
+      return [
+        "Evening in the Military Police is quiet.",
+        "It’s quiet on purpose.",
+        "",
+        "A clerk slides a folder across a desk like it burns.",
+        N("Detective Oris","There's something we need to look at."),
+        N("Detective Oris","You. watch. Don’t get involved and keep your opinions to yourself."),
+        "",
+        natHere ? "Nat stands beside you. Too still. Eyes sharp." : "You’re placed slightly behind Oris, where you can’t interrupt.",
+        "",
+        "The folder title is short.",
+        "Missing: Two children."
+      ];
+    },
+    title:"investigation",
+    choices:[
+      {k:"A",label:"Ask what district the kids were taken from.",fx:{initiative:+1,warnFlawless:1},next:"p4_evening_mp_2"},
+      {k:"B",label:"Stay silent and listen.",fx:{obedience:+1},next:"p4_evening_mp_2"}
+    ]
+  },
+
+  p4_evening_mp_2:{
+    bgm:"p4_eve",
+    text:()=>{
+      const natHere = natShouldFollow("mp");
+      return [
+        "You follow Oris through a corridor that smells like.. polished wood.",
+        "A door opens to a small room with no windows.",
+        "",
+        "A man speaks too politely.",
+        N("Well-dressed Man","Detective. It's always a pleasure."),
+        "",
+        natHere ? N("Nat","…?") : "You suddenly feel like your uniform is costume.",
+        "",
+        N("Detective Oris","A few questions."),
+        "The man answers smoothly, and handed a bag full of money. It's suspicious.",
+        "",
+        "Then Oris steps closer to you, voice low.",
+        N("Detective Oris","You didn't see anything tonight.")
+      ];
+    },
+    title:"instruction",
+    choices:[
+      {k:"A",label:"Agree. Keep your face neutral.",fx:{obedience:+1},next:"p4_evening_mp_3"},
+      {k:"B",label:"Refuse. Say it’s wrong.",fx:{initiative:+1,hesitation:+1,warnFlawless:1},next:"p4_evening_mp_risk"}
+    ]
+  },
+
+  p4_evening_mp_3:{
+    bgm:"p4_eve",
+    text:()=>{
+      const natHere = natShouldFollow("mp");
+      return [
+        "Oris nods once, satisfied.",
+        "The well-dressed man smiles.",
+        "",
+        natHere ? "Nat exhales through his nose. Not approval." : "You know something's wrong.. but you say nothing.",
+        "",
+        "On the way out, you pass a side hall.",
+        "A muffled sound from behind a door.",
+        "A sound.. like a person."
+      ];
+    },
+    title:"aftertaste",
+    choices:[
+      {k:"A",label:"Keep walking. Don’t turn your head.",fx:{obedience:+1},next:"p4_evening_hub_return"},
+      {k:"B",label:"Turn back.",fx:{initiative:+1,warnFlawless:1},next:"p4_evening_mp_death"}
+    ]
+  },
+
+  p4_evening_mp_risk:{
+    bgm:"p4_eve",
+    text:()=>{
+      const natHere = natShouldFollow("mp");
+      return [
+        "The room goes still.",
+        "Even the air feels like it’s waiting to be corrected.",
+        "",
+        N("Detective Oris","Little cadet."),
+        N("Detective Oris","You can be right, or you can be employed."),
+        "",
+        natHere ? "Nat’s eyes flick to you; He's telling you not to push it." : "You realize how alone you are inside these walls.",
+        "",
+        "Oris steps in close enough that only you can hear him.",
+        N("Detective Oris","If you keep pushing your luck, the Trainee Corps is gonna be missing one cadet by graduation.")
+      ];
+    },
+    title:"decision",
+    choices:[
+      {k:"A",label:"Back down. Apologize.",fx:{obedience:+1,warnFlawless:1},next:"p4_evening_mp_3"},
+      {k:"B",label:"Push again, this isn't right. Demand the report to be filed.",fx:{initiative:+1,hesitation:+1,breakFlawless:true},next:"p4_evening_mp_death"}
+    ]
+  },
+
+  p4_evening_mp_death:{
+    bgm:"p4_eve",
+    unskippable:true,
+    text:()=>{
+      const natHere = natShouldFollow("mp");
+      return [
+        "The detective would draw his flintlock..",
+        "I gave you a chance to walk away.",
+        "He'd fire at you.",
+        "",
+        "It connects. The bullet hits the skull.",
+        "...",
+        "",
+        natHere ? "Nat’s voice is the last thing you hear." : "You understand too late; the walls keep sound in.",
+        "",
+        W("Incident classified."),
+        W("Record sealed."),
+        "",
+        PICK("DECEASED.")
+      ];
+    },
+    end:true
+  },
+
+  /* --- GARRISON EVENING (kept) --- */
+  p4_evening_gar_1:{
+    bgm:"p4_eve",
+    text:()=>[
+      "A bell rings -- not the clean drill tone.",
+      "The sergeant’s posture changes first. Then everyone else follows.",
+      "",
+      N("Garrison Sergeant Miguel","Movement in the outer districts. Titans."),
+      N("Garrison Sergeant Miguel","We prep the cannons. Now."),
+      "",
+      "They hand you a powder tin and a ramrod.",
+      "Your hands feel too important all at once."
+    ],
+    title:"garrison duty",
+    choices:[
+      {k:"A",label:"Follow the loading sequence exactly.",fx:{obedience:+1},next:"p4_evening_gar_2"},
+      {k:"B",label:"Try to speed it up to prove you’re useful.",fx:{initiative:+1,warnFlawless:1},next:"p4_evening_gar_failcheck"}
+    ]
+  },
+
+  p4_evening_gar_2:{
+    bgm:"p4_eve",
+    text:()=>[
+      "You try to recall the steps of loading the cannon..",
+      "Powder. Wad. Shot. Ram. Lock.",
+      "",
+      N("Garrison Sergeant Miguel","Good."),
+      N("Garrison Sergeant Miguel","Boring is alive."),
+      "",
+      "From the firing platform, you see torches in the far distance.",
+      "Not close enough to confirm.",
+      "Close enough to keep your stomach tight."
+    ],
+    title:"hold",
+    choices:[
+      {k:"A",label:"Hold position and wait for command.",fx:{obedience:+1},next:"p4_evening_hub_return"},
+      {k:"B",label:"Lean to get a better look anyway.",fx:{hesitation:+1,warnFlawless:1},next:"p4_evening_gar_risk"}
+    ]
+  },
+
+  p4_evening_gar_risk:{
+    bgm:"p4_eve",
+    text:()=>[
+      "The wind shifts. The torchline flickers.",
+      "A shout goes up along the wall.",
+      "",
+      N("Garrison Soldier","MOVE—!"),
+      "",
+      "A cannon crew lurches. Someone slips on the stone.",
+      "The fuse cord is suddenly in the wrong hands."
+    ],
+    title:"split second",
+    choices:[
+      {k:"A",label:"Back away and let the crew handle it.",fx:{obedience:+1},next:"p4_evening_hub_return"},
+      {k:"B",label:"Grab the fuse cord and try to save it.",fx:{initiative:+1,warnFlawless:1},next:"p4_evening_gar_death"}
+    ]
+  },
+
+  p4_evening_gar_failcheck:{
+    bgm:"p4_eve",
+    text:()=>[
+      "You rush the sequence.",
+      "Your brain insists you can make it cleaner later.",
+      "",
+      "A veteran’s eyes snap to your hands.",
+      N("Garrison Veteran","Stop. STOP. NOW!"),
+      "",
+      "Too late.",
+      "You feel the barrel vibrate before you hear anything."
+    ],
+    title:"error",
+    choices:[
+      {k:"A",label:"Freeze.",fx:{hesitation:+1},next:"p4_evening_gar_death"},
+      {k:"B",label:"Drop everything and dive away.",fx:{obedience:+1,injuries:+1,warnFlawless:1},next:"p4_evening_hub_return"}
+    ]
+  },
+
+  p4_evening_gar_death:{
+    bgm:"p4_eve",
+    unskippable:true,
+    text:()=>[
+      "You grab the cord without checking the vent.",
+      "The pressure has nowhere to go.",
+      "Sound becomes pressure.. The blast doesn't go forward.",
+      "",
+      "Stone dust fills your mouth.",
+      "Your fingers don’t close right anymore.",
+      "",
+      W("Operator error recorded."),
+      W("Cause: sequence deviation."),
+      "",
+      PICK("DECEASED.")
+    ],
+    end:true
+  },
+
+  /* --- SCOUTING LEGION EVENING (YOUR PROVIDED) --- */
+  p4_evening_sl_1:{
+    bgm:"p4_eve",
+    text:()=>{
+      const natHere = natShouldFollow("sl");
+      return [
+        "Scouts don’t celebrate. They prepare.",
+        "Leather. Blades. Reins. Silence.",
+        "",
+        N("Mira","Hold this strap. Tight. No slack."),
+        N("Steve","I swear my hands are freezing off."),
+        natHere ? N("Nat","Stop talking. Count your buckles.") : "A senior Scout passes without looking at you.",
+        "",
+        "You overhear pay numbers.",
+        "Numbers that don’t match the risk."
+      ];
+    },
+    title:"prep",
+    choices:[
+      {k:"A",label:"Focus on buckles + blade checks.",fx:{obedience:+1},next:"p4_evening_sl_2"},
+      {k:"B",label:"Wander to hear more about pay and contracts.",fx:{initiative:+1,warnFlawless:1},next:"p4_evening_sl_risk"}
+    ]
+  },
+
+  p4_evening_sl_2:{
+    bgm:"p4_eve",
+    text:()=>{
+      const natHere = natShouldFollow("sl");
+      return [
+        "A horse jerks as someone yanks the bit wrong.",
+        "The stable line ripples with tension.",
+        "",
+        N("Mira","Easy—! Don’t pull—"),
+        N("Steve","Woah— WOAH—"),
+        "",
+        natHere ? "Nat is already moving before anyone calls it." : "You feel the moment stretch, waiting for someone competent.",
+        "",
+        "If the horse bolts, it takes gear with it.",
+        "If it kicks, it takes bone."
+      ];
+    },
+    title:"stable incident",
+    choices:[
+      {k:"A",label:"Hold the line. Let Mira handle the head.",fx:{obedience:+1},next:"p4_evening_hub_return"},
+      {k:"B",label:"Grab the reins and try to stop it yourself.",fx:{initiative:+1,warnFlawless:1},next:"p4_evening_sl_failcheck"}
+    ]
+  },
+
+  p4_evening_sl_failcheck:{
+    bgm:"p4_eve",
+    text:()=>{
+      const natHere = natShouldFollow("sl");
+      return [
+        "The reins burn your palm.",
+        "The horse’s weight is not a negotiation.",
+        "",
+        natHere ? N("Nat","LET GO!") : N("Mira","Let it..! LET IT!"),
+        "",
+        "You choose late.",
+        "That’s the mistake."
+      ];
+    },
+    title:"fail check",
+    choices:[
+      {k:"A",label:"Let go and step back.",fx:{obedience:+1,injuries:+1,warnFlawless:1},next:"p4_evening_hub_return"},
+      {k:"B",label:"Hold tighter. Don’t lose control.",fx:{hesitation:+1,breakFlawless:true},next:"p4_evening_sl_death_reins"}
+    ]
+  },
+
+p4_evening_sl_death_reins:{
+  bgm:"p4_eve",
+  unskippable:true,
+  text:()=>[
+    "You hold tighter..",
+    "Like immovable objects meets unstoppable force.",
+    "",
+    "The horse would surge again.. not forward, but sideways.",
+    "A panicked weight swing that turns the line into a weapon.",
+    "",
+    "The reins snap through your grip.",
+    "Your shoulder yanks wrong.",
+    "Then the hoof finds you.",
+    "",
+    "It isn’t dramatic.",
+    "It’s blunt..",
+    "It’s final.",
+    "",
+    W("Incident noted."),
+    W("Cause: improper restraint under load."),
+    "",
+    PICK("DECEASED.")
+  ],
+  end:true
+},
+
+  p4_evening_sl_risk:{
+    bgm:"p4_eve",
+    text:()=>{
+      const natHere = natShouldFollow("sl");
+      return [
+        "You drift toward a knot of older Scouts.",
+        "Their voices are low and practiced.",
+        "",
+        "You hear them talking; contracts, deduction fees, 'reducing pay'.",
+        "Then one of them notices you eavesdropping.",
+        "",
+        natHere ? "Nat’s stare pins you in place. He's warning you." : "Mira's hand touches your sleeve.. She's telling you to stop.",
+        "",
+        N("Older Scout","Cadets don’t listen in."),
+        "The silence after is sharper than any blade."
+      ];
+    },
+    title:"pressure",
+    choices:[
+      {k:"A",label:"Back off immediately.",fx:{obedience:+1,warnFlawless:1},next:"p4_evening_sl_2"},
+      {k:"B",label:"Ask what it means.",fx:{initiative:+1,hesitation:+1,breakFlawless:true},next:"p4_evening_sl_death_fees"}
+    ]
+  },
+
+  p4_evening_sl_death_fees:{
+    bgm:"p4_eve",
+    unskippable:true,
+    text:()=>[
+      "You ask what they're talking about.",
+      "",
+      "The word hangs longer than it should.. Silence.. for awhile.",
+      N("Older Scout","Fees mean you pay, even if you come back. You pay because you're alive."),
+      N("Older Scout","If gear goes missing, they take it from your pay. If you go missing, they stop paying. Simple, right? Potato potata."),
+      "Shouldn't it be the other way around..?",
+      N("Older Scout","I think you've heard too much. Cadet."),
+
+      "",
+      "Someone laughs. Not loudly.",
+      "Someone else steps closer.",
+      "Hands take your arms, you'd feel a fist hit your stomach.",
+      "The air leaves you in a sharp sound you don’t recognize as your own.",
+       "Another punch lands in your ribs.",
+       "You'd fall to the ground.. and the only thing you can hear are your friends concerned.",
+      "",
+      "",
+      W("Cadet unsuited for attachment."),
+      W("Loss recorded."),
+      "",
+      PICK("DECEASED.")
+    ],
+    end:true
+  },
+
+  /* --- EVENING RETURN (smoothed into night with reflection setup) --- */
+  p4_evening_hub_return:{
+    bgm:"p4_eve",
+    text:()=>{
+      const b=currentBranch();
+      if(b==="sl"){
+        return [
+          "The stable settles back into routine.",
+          "Too quickly. Like nothing happened.",
+          "",
+          "Mira wipes her hands on her uniform like it helps.",
+          N("Steve","…So we’re just gonna pretend this is normal?"),
+          N("Mira","We don’t have a choice."),
+          N("Steve","I know. It's just.. Nevermind."),
+          "",
+          "You can still feel the reins in your palm.",
+          "Even when you’re not holding anything."
+        ];
+      }
+      if(b==="mp"){
+        const natHere = natShouldFollow("mp");
+        return [
+          "You step back into the hallway like it’s air again.",
+          "But the air feels owned.",
+          "",
+          natHere ? N("Nat","We’re not safe here.") : "You realize you’re not being trained. You’re being measured.",
+          "",
+          "Outside, the city is calm.",
+          "Inside, it’s organized."
+        ];
+      }
+      return [
+        "The alarm chain eases, but nobody relaxes.",
+        "The cannon crews stay at their posts until they're told otherwise.",
+        "",
+        "You notice your hands are still shaking.",
+        "Not from fear.",
+        "From effort."
+      ];
+    },
+    title:"evening",
+    choices:[
+      {k:"A",label:"Move into night.",fx:{},next:"p4_night_hub"}
+    ]
+  },
+
+  /* --- NIGHT HUB (branch routes + campfire skillcheck for SL) --- */
+  p4_night_hub:{
+    bgm:"p4_night",
+    text:()=>[
+      "Night comes with less light, not less responsibility.",
+      "The walls hold sound in.",
+      "",
+      "You’re finally somewhere you can sit.",
+      "That doesn’t mean you’re off duty."
+    ],
+    title:"night",
+    choices:[
+      {k:"A",label:"Continue.",fx:{},next:"p4_night_branch"}
+    ]
+  },
+
+  p4_night_branch:{
+    bgm:"p4_night",
+    text:()=>{
+      const b=currentBranch();
+      if(b==="sl"){
+        const natHere=natShouldFollow("sl");
+        return [
+          "A small fire is allowed tonight.",
+          "Not for comfort. For calories.",
+          "",
+          "Someone hands you a skewer.",
+          "Your job is simple: don’t burn it.",
+          "",
+          N("Steve","If you char it, I'm not eating it."),
+          N("Mira","Just rotate it. Slow."),
+          natHere ? N("Nat","Don’t zone out.") : "The Scouts around you watch the fire like it's a clock."
+        ];
+      }
+      if(b==="mp"){
+        const natHere=natShouldFollow("mp");
+        return [
+          "The Military Police quarters are warm.",
+          "Warm like a lie you could get used to.",
+          "",
+          natHere ? N("Nat","This place makes my skin crawl.") : "You sit alone long enough to hear your own thoughts again.",
+          "",
+          "You think about the folder.",
+          "Missing: Two children.",
+          "",
+          "You think about how easily a problem becomes 'not your problem'."
+        ];
+      }
+      return [
+        "Garrison bunks are stacked and tight.",
+        "Men talk like they're joking, but the jokes don't land.",
+        "",
+        "A veteran counts coins on his palm.",
+        "Then hides them when he sees you looking.",
+        "",
+        "Outside: Titans.",
+        "Inside: a different kind of pressure."
+      ];
+    },
+    title:"night",
+    choices:[
+      {k:"A",label:"Continue.",fx:{},next:()=>{
+        const b=currentBranch();
+        if(b==="sl") return "p4_night_sl_skill";
+        if(b==="mp") return "p4_night_mp_reflect";
+        return "p4_night_gar_reflect";
+      }}
+    ]
+  },
+
+  /* --- SL NIGHT SKILLCHECK --- */
+p4_night_sl_skill:{
+   bgm:"p4_night",
+  text:()=>[
+    PICK("SKILLCHECK: rotate the skewer."),
+    "Tap at the right time.",
+    ""
+  ],
+  title:"skillcheck",
+  skillcheck:{
+    title:"Campfire Duty",
+    desc:"Rotate the meat before it burns.",
+    speed:0.92,
+
+    // fear scaling
+    useFearWindow:true,
+    fearCenter:0.56,
+    fearEasyW:0.030,
+    fearHardW:0.014,
+    widen:0.010
+  }
+},
+
+
+  p4_night_sl_fire_success:{
+    bgm:"p4_night",
+    text:()=>[
+      "You tap at the right time.",
+      "The meat turns cleanly.",
+      "",
+      N("Mira","…Good."),
+      N("Steve","Okay. Respect. You da man. Like that one chef.. Gerdon Ramsey."),
+      "",
+      "You can taste the salt and smoke.",
+      "For a second, it feels almost normal."
+    ],
+    title:"campfire",
+    choices:[
+      {k:"A",label:"Continue.",fx:{obedience:+1},next:"p4_night_sl_after"}
+    ]
+  },
+
+  p4_night_sl_fire_fail:{
+    bgm:"p4_night",
+    text:()=>[
+      "You tap late.",
+      "The edge blackens.",
+      "",
+      N("Steve","Bro…"),
+      N("Mira","It's fine. Eat it anyway."),
+      "",
+      "It tastes like punishment.",
+      "Small. Manageable.",
+      "Still real."
+    ],
+    title:"campfire",
+    choices:[
+      {k:"A",label:"Continue.",fx:{hesitation:+1,warnFlawless:1},next:"p4_night_sl_after"}
+    ]
+  },
+
+  p4_night_sl_after:{
+    bgm:"p4_night",
+    text:()=>{
+      const natHere=natShouldFollow("sl");
+      return [
+        "The fire dies down to embers.",
+        "Everyone eats in silence.",
+        "",
+        N("Steve","…You guys hear what they were saying earlier?"),
+        N("Steve","We barely get paid anything.. for risking our lives."),
+        "",
+        N("Mira","I heard."),
+        N("Mira","Contracts. Deductions. Fees."),
+        "",
+        natHere ? N("Nat","They don’t pay you to live.") : "You do the math without meaning to.",
+        "",
+        "It doesn’t work out.",
+        "",
+        N("Steve","Are we really going to join this?"),
+        "",
+        "Nobody answers right away.",
+        "That delay feels heavier than shouting."
+      ];
+    },
+    title:"the truth",
+    choices:[
+      {k:"A",label:"Say nothing.",fx:{fear:+1},next:"p4_night_end"},
+      {k:"B",label:"Say it anyway: “They’re paying us to die.”",fx:{initiative:+1,warnFlawless:1},next:"p4_night_end"}
+    ]
+  },
+
+  /* --- MP NIGHT REFLECTION --- */
+  p4_night_mp_reflect:{
+    bgm:"p4_night",
+    text:()=>{
+      const natHere=natShouldFollow("mp");
+      return [
+        "You sit with your back to a warm wall.",
+        "Warm like it’s trying to buy your loyalty.",
+        "",
+        natHere ? N("Nat","If they can erase people, they can erase us.") : "You replay Oris’s voice in your head until it stops sounding like a person.",
+        "",
+        "You realize branch badges aren’t freedom.",
+        "They’re just different keys.",
+        "",
+        "And keys open doors both ways."
+      ];
+    },
+    title:"night",
+    choices:[
+      {k:"A",label:"End.",fx:{},next:"p4_night_end"}
+    ]
+  },
+
+  /* --- GARRISON NIGHT REFLECTION --- */
+  p4_night_gar_reflect:{
+    bgm:"p4_night",
+    text:()=>[
+      "You lie down and your body keeps bracing anyway.",
+      "Like it expects another bell.",
+      "",
+      "You think about the cannon steps.",
+      "How close 'procedure' is to 'accident'.",
+      "",
+      "The Wall doesn’t end danger.",
+      "It just schedules it."
+    ],
+    title:"night",
+    choices:[
+      {k:"A",label:"End.",fx:{},next:"p4_night_end"}
+    ]
+  },
+
+  p4_night_end:{
+    bgm:"p4_night",
+    text:()=>[
+      "You close your eyes knowing tomorrow won’t ask if you’re ready.",
+      "",
+      PICK("End of Phase 4.")
+    ],
+    end:true
+  }
+};
+
+/* ===== choices / hotkeys ===== */
+function renderChoices(scene){
+  clearChoices(); if(scene.end) return;
+  const raw=scene.choices||[];
+  currentChoices=raw.filter(c=>checkReq(c.req));
+  const hasDeath=currentChoices.some(c=>{
+    const nxt=(typeof c.next==="function")?c.next():c.next;
+    return (typeof nxt==="string" && nxt.includes("death")) || (SCENES[nxt]?.end && nxt && String(nxt).includes("death"));
+  });
+  setRisk(!!hasDeath);
+  showChoices(scene.title||"action","phase 4");
+  currentChoices.forEach((c,idx)=>{
+    const b=document.createElement("button");
+    b.className="btn choice"; b.type="button";
+    b.innerHTML=`<span>${c.k}. ${c.label}</span>`;
+    b.onclick=()=>pick(idx);
+    choicesEl.appendChild(b);
+  });
+
+  document.onkeydown=e=>{
+    if(statsModal.classList.contains("show")) return;
+    if(locked||modal.classList.contains("show")||$("skillModal").classList.contains("show")) return;
+
+    const ae=document.activeElement;
+    if(ae===inp || (ae && (ae.tagName==="INPUT"||ae.tagName==="TEXTAREA"||ae.isContentEditable))) return;
+
+    const key=e.key.toUpperCase();
+    const i=currentChoices.findIndex(x=>String(x.k).toUpperCase()===key);
+    if(i>=0){e.preventDefault();pick(i)}
+  };
+}
+const checkReq=req=>{
+  if(!req) return true;
+  if(req.flag && !hasFlag(req.flag)) return false;
+  if(req.nflag && hasFlag(req.nflag)) return false;
+  if(req.rel){const cur=(state.rel&&state.rel[req.rel.k])||0; if(cur < (req.rel.min??0)) return false;}
+  if(req.flawless && !state.flawless) return false;
+  return true;
+};
+
+/* navigation */
+async function goto(id){
+  sceneId=id;
+  const scene=SCENES[id];
+  if(!scene) return;
+
+  autosave();
+  locked=true; clearChoices();
+  setBlood(0); // phase 4: keep off unless you choose otherwise
+  setVignette(0); hideAllBoxes();
+  applyBgm(scene);
+
+  const prevForce=forceNoSkip,prevSkip=settings.skip,prevSpeed=settings.speed;
+  if(scene.unskippable){ forceNoSkip=true;skipReq=false;settings.speed=1;settings.skip=false; }
+
+  await say(["",...(typeof scene.text==="function"?scene.text(state):scene.text)]);
+
+  if(scene.unskippable){ settings.speed=prevSpeed;settings.skip=prevSkip;forceNoSkip=prevForce; }
+
+  /* skillcheck hook */
+  if(scene.skillcheck){
+    const cfg=scene.skillcheck;
+   const ok = await openSkillcheck({
+  title: cfg.title,
+  desc: cfg.desc,
+  speed: cfg.speed,
+  window: cfg.window,
+  useFearWindow: cfg.useFearWindow,
+  fearCenter: cfg.fearCenter,
+  fearEasyW: cfg.fearEasyW,
+  fearHardW: cfg.fearHardW,
+  widen: cfg.widen,
+  hintText: cfg.hintText || "Tap when the marker is inside the highlighted zone."
+});
+    if(ok) return goto("p4_night_sl_fire_success");
+    return goto("p4_night_sl_fire_fail");
+  }
+
+  if(scene.end){
+    setRisk(false);
+    setStatus("LOGGED");
+    showStatus("status","logged","Logged.");
+    autosave();
+    locked=true;
+    return;
+  }
+
+  renderChoices(scene);
+  autosave();
+  locked=false;
+}
+
+/* pick (supports next as function) */
+function pick(i){
+  const scene=SCENES[sceneId];
+  if(!scene||locked) return;
+  const c=currentChoices[i];
+  if(!c) return;
+
+  locked=true;
+  enqueue(async()=>{
+    await say(["",PICK(`> ${c.k}. ${c.label}`)]);
+    applyFx(c.fx);
+    const nxt = (typeof c.next === "function") ? c.next() : c.next;
+
+    if(nxt==="__SKILLCHECK__"){
+      // current scene must have skillcheck; just re-enter goto to trigger it
+      await goto(sceneId);
+      return;
+    }
+
+    if(nxt) await goto(nxt);
+  });
+}
+
+/* flow */
+const enqueue=fn=>(q=q.then(fn).catch(()=>{}));
+
+/* start + boot */
+function start(){
+  if(started) return;
+  started=1; hint.classList.add("hidden");
+  document.removeEventListener("click",start);
+  document.removeEventListener("keydown",keyStart);
+  initAudio().then(()=>enqueue(async()=>{
+    const imported = importFromPhase3();
+    if(!imported){
+      if(loadSave()){
+        await say(["","Loaded Phase 4 save.",""]);
+        await goto(sceneId||"p4_entry");
+        return;
+      }
+    }
+    clearScreen();
+    await goto("p4_entry");
+  }));
+}
+function keyStart(e){ if(e.key===" "||e.key==="Enter"){e.preventDefault();start();} }
+document.addEventListener("click",start);
+document.addEventListener("keydown",keyStart);
+
+/* skip interactions */
+document.addEventListener("pointerdown",()=>{ if(started&&!modal.classList.contains("show") && !statsModal.classList.contains("show") && !skillModal.classList.contains("show")) requestSkip(); },{passive:true});
+document.addEventListener("keydown",e=>{ if(!started||modal.classList.contains("show")||statsModal.classList.contains("show")||skillModal.classList.contains("show")) return; if(e.key===" "||e.key==="Enter") requestSkip(); });
+
+/* input (kept) */
+send.addEventListener("click",()=>{
+  const v=inp.value.trim(); if(!v) return; inp.value="";
+  enqueue(()=>say(["","Command rejected.","Phase 4 uses choices."]));
+});
+inp.addEventListener("keydown",e=>{ if(e.key==="Enter") send.click(); });
+
+/* boot */
+(function(){
+  render();
+  hint.textContent = "click / space / enter to begin";
+})();
+</script>
+</body></html>
