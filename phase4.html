@@ -783,13 +783,13 @@ const SCENES={
   },
 
   p4_route_branch:{
-    bgm:"p4_day",
-    text:()=>[""],
-    title:"",
-    choices:[
-      {k:"A",label:"(route)",fx:{},next:()=> currentBranch() ? "p4_day_branch_select" : "p4_day_branch_select"}
-    ]
-  },
+  bgm:"p4_day",
+  text:()=>[""],
+  title:"",
+  choices:[
+    {k:"A",label:"(route)",fx:{},next:()=> currentBranch() ? "p4_day_start" : "p4_day_branch_select"}
+  ]
+},
 
   p4_day_branch_select:{
     bgm:"p4_day",
