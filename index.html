@@ -551,6 +551,7 @@ function clearSave(){
   try{
     localStorage.removeItem(SAVEKEY);
     localStorage.removeItem(MANUAL_LOCK_KEY);
+    localStorage.removeItem("aot_cadet_name");
     lastAutoScene=null;
   }catch{}
 }
@@ -565,7 +566,7 @@ btnClear.onclick=()=>{
   clearSave();
   state={
     phase:1,
-    name:localStorage.getItem("aot_cadet_name")||"",
+    name:"",
     fear:0,hesitation:0,obedience:0,initiative:0,injuries:0,dead:false,
     flags:{}, rel:{}, path:{},
     flawless:true, flawlessWarn:0,
@@ -700,11 +701,11 @@ p3_entry:{bgm:"d1_day",text:s=>[
   W("You will integrate. You will be observed.")
 ],title:"you say",choices:[
   {k:"A",label:"\"…Hey.\"",fx:{obedience:+1,rel:{k:"mira",d:+1},flag:"p3_arrived"},next:"p3_morning_hub"},
-  {k:"B",label:`"Name’s ${state.name||"cadet"}. Just transferred."`,fx:{initiative:+1,rel:{k:"nat",d:-1},warnFlawless:1,flag:"p3_brag"},next:"p3_morning_hub"},
+  {k:"B",label:`"Just transferred."`,fx:{initiative:+1,rel:{k:"nat",d:-1},warnFlawless:1,flag:"p3_brag"},next:"p3_morning_hub"},
   {k:"C",label:"Say nothing.",fx:{hesitation:+1,warnFlawless:1,flag:"silent"},next:"p3_morning_hub"}
 ]},
 p3_morning_hub:{bgm:"d1_day",text:()=>[
-  "Steve keeps talking to fill the air.","Mira watches like she’s deciding if you’re safe.","Nat watches like he’s deciding if you’re worth time.","",
+  "Steve keeps talking just to keep the room alive.","Mira watches you carefully.","Nat watches you like he already made up his mind.","",
   "Somewhere down the hall, someone drops a bucket.","The sound echoes too long.","",W("Training in one hour.")
 ],title:"before training",choices:[
   {k:"A",label:"Talk to Mira.",fx:{flag:"talked_mira"},next:"p3_mira_talk"},
@@ -723,8 +724,8 @@ p3_morning_prepare:{bgm:"d1_day",text:()=>[
   {k:"3",label:"Head out early to the yard.",fx:{obedience:+1},next:"p3_afternoon_entry"}
 ]},
 p3_morning_prepare_2:{bgm:"d1_day",text:()=>[
-  "The quiet starts to press on your ears.","Like a hand covering your mouth.","",
-  "You catch your reflection in a dark window.","You look… smaller than you expected."
+  "The quiet starts pressing in.","It makes every little sound feel louder.","",
+  "You catch your reflection in a dark window.","You look more tired than you expected."
 ],title:"you do",choices:[
   {k:"A",label:"Shake it off. Rejoin the room.",fx:{},next:"p3_morning_hub"},
   {k:"B",label:"Hold onto the quiet. Let it harden.",fx:{flag:"hardened",warnFlawless:1},next:"p3_morning_hub"},
@@ -735,7 +736,7 @@ p3_morning_prepare_2:{bgm:"d1_day",text:()=>[
 p3_mira_talk:{bgm:"d1_day",text:()=>[
   "Mira doesn’t move much when you come closer.","But she makes space anyway.","",
   N("Mira","First day always feels wrong."),
-  N("Mira","Like you’re wearing someone else’s life."),
+  N("Mira","Like none of it fits yet."),
   "","She glances toward Nat, then away."
 ],title:"you reply",choices:[
   {k:"1",label:"\"Yeah… it feels fake.\"",fx:{rel:{k:"mira",d:+2},flag:"mira_anchor",setPath:{k:"mira",v:"anchor"}},next:"p3_mira_follow"},
@@ -1060,7 +1061,7 @@ p3_d2_morning_ms_activity:{bgm:"d2_day",text:()=>[
   "",
   "Mira checks your strap-- careful, practiced.",
   N("Mira","You’re okay. That's good."),
-  "She says it like a decision."
+  "You're reassured.."
 ],title:"to training",choices:[
   {k:"A",label:"Head to drills.",fx:{},next:"p3_d2_afternoon_entry"}
 ]},
@@ -1102,13 +1103,14 @@ p3_d2_afternoon_entry:{bgm:"d2_eve",text:()=>[
 ]},
 
 p3_d2_evening_hub:{bgm:"d2_eve",text:()=>[
-  "Evening hits like a slow bruise.",
-  "Your muscles don’t relax. They just… stop fighting.",
+  "Evening settles over the yard.",
+  "Your muscles finally stop arguing with you.",
   "",
-  "Cadets get assigned small work--",
+  "Cadets get handed small work—",
   "cleaning gear, hauling water, fixing torn straps.",
   "",
-  "People look for comfort the way starving people look for bread. Cause bread tastes better than key."
+  "Nobody says they want comfort out loud.",
+  "But everyone reaches for something familiar."
 ],title:"evening path",choices:[
   {k:"A",label:"Evening with Mira & Steve.",req:{flag:"sat_ms"},fx:{flag:"d2_path_ms"},next:"p3_d2_evening_ms"},
   {k:"B",label:"Evening with Nat.",req:{flag:"sat_nat"},fx:{flag:"d2_path_nat"},next:"p3_d2_evening_nat"},
@@ -1117,8 +1119,8 @@ p3_d2_evening_hub:{bgm:"d2_eve",text:()=>[
 
 /* ===== MIRANSTEVE ===== */
 p3_d2_evening_ms:{bgm:"d2_eve",text:()=>[
-  "Steve would drag your shirt toward the wash line like it’s urgent.",
-  "Mira follows without a word, arms full of folded cloth",
+  "Steve drags your shirt toward the wash line like this somehow became official business.",
+  "Mira follows without a word, arms full of folded cloth.",
   "",
   N("Steve","Okay. Evening plan."),
   N("Steve","One, don’t get noticed"),
@@ -1245,7 +1247,7 @@ p3_d2_evening_nat:{bgm:"d2_eve",text:()=>[
   "He just… starts walking, and you either follow or you don’t.",
   "",
   "He takes you to a quiet corner of the yard where the light dies early.",
-  "A crate of gear sits there like it’s waiting to be judged.",
+  "A crate of gear waits there beside the wall.",
   "",
   N("Nat","Maintenance."),
   N("Nat","If your equipment fails, you'll die like an idiot. My brother taught me that."),
@@ -1260,7 +1262,7 @@ p3_d2_evening_nat:{bgm:"d2_eve",text:()=>[
   N("Nat","About falling behind."),
   "",
   "He doesn’t look up when he says it.",
-  "Like eye contact would soften it."
+  "Maybe because saying it straight would make it harder to hide."
 ],title:"you answer",choices:[
   {k:"A",label:"\"I heard you.\" (no excuses)",fx:{rel:{k:"nat",d:+2},flag:"d2_nat_trust"},next:"p3_d2_evening_nat_more"},
   {k:"B",label:"\"You talk like you’ve been left behind.\" ",fx:{warnFlawless:1,rel:{k:"nat",d:-1}},next:"p3_d2_evening_nat_more"},
@@ -1275,7 +1277,7 @@ p3_d2_evening_nat_more:{bgm:"d2_eve",text:()=>[
   N("Nat","Scouting Legion took him outside the walls. An expedition."),
   N("Nat","They brought back a report and a piece of cloth with his name."),
   "",
-  "He wipes his hands like he’s wiping the memory off.",
+  "He wipes his hands on the cloth and keeps going."
   "",
   N("Nat","So yeah."),
   N("Nat","I don’t like watching people fall behind."),
@@ -1299,15 +1301,17 @@ p3_d2_evening_nat_tasks:{bgm:"d2_eve",text:()=>[
   N("Nat","If you’re still standing, we're gonna talk."),
   "",
   "It’s a test.",
-  "It’s always a test.",
+  "It’s always a test..",
   "",
   "You run until your lungs feel thin.",
   "You come back with your throat burning.",
   "",
-    "Nat nods like he expected it.",
-  N("Nat","Good."),
+    "Nat would nod.. almost like he expected it.",
+  N("Nat","Good boy."),
+  N("Nat","Or girl.. don't care. Just.. good."),
+  N("Nat","He'd sit down.."),
   "",
-  "He claims the crate like it’s assigned to him.",
+  "He claims the crate like it’s a throne to him.",
   "The quiet around it feels owned."
 ],title:"evening talk",choices:[
   {k:"A",label:"Sit with him. Let him speak.",fx:{rel:{k:"nat",d:+1}},next:"p3_d2_night_branch_talk"},
@@ -1315,11 +1319,11 @@ p3_d2_evening_nat_tasks:{bgm:"d2_eve",text:()=>[
 ]},
 
 p3_d2_night_branch_talk:{bgm:"d2_night",text:()=>[
-  "You sit on the edge of the crate’s shadow.",
-  "Nat doesn’t shift to make room-- he just allows it.",
+  "You'd sit on the edge of the crate’s shadow.",
+  "Nat doesn’t shift to make room.. he just allows it.",
   "",
   "For a while, he says nothing.",
-  "Not hesitation. Assessment.",
+  "Not hesitation. he's assessing you.",
   "",
   N("Nat","Question."),
   N("Nat","What branch are you interested in joining?")

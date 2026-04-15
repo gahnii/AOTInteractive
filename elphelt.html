@@ -637,7 +637,6 @@ function natShouldFollow(branch){
 
 /* ===== STATS SYSTEM ===== */
 function fileStatus(){ if(!state.flawless) return "FLAGGED"; return (state.flawlessWarn>0) ? "UPDATED" : "CLEAN"; }
-function isProdigy(){ return fileStatus()==="CLEAN"; }
 function fileStatusDesc(){ const fs=fileStatus(); if(fs==="CLEAN") return "You're ideal."; if(fs==="UPDATED") return "Still flawless, but on the verge of losing it."; return "Flawless is broken."; }
 function badgeClass(fs){ return fs==="CLEAN"?"clean":fs==="UPDATED"?"updated":"flagged"; }
 function band(n){ n=clamp(n,0,9); if(n<=1) return "LOW"; if(n<=4) return "ELEVATED"; if(n<=7) return "HIGH"; return "CRITICAL"; }
@@ -714,10 +713,10 @@ function loadFromSnapshot(s){
   return true;
 }
 function loadSave(){ try{ const raw=localStorage.getItem(SAVEKEY); if(!raw) return false; return loadFromSnapshot(JSON.parse(raw)); } catch{return false} }
-function clearSave(){ try{ localStorage.removeItem(SAVEKEY); localStorage.removeItem(MANUAL_LOCK_KEY); lastAutoScene=null; }catch{} }
+function clearSave(){ try{ localStorage.removeItem(SAVEKEY); localStorage.removeItem(MANUAL_LOCK_KEY); localStorage.removeItem("aot_cadet_name"); lastAutoScene=null; }catch{} }
 btnSave.onclick=()=>{ autosaveForce(); lastAutoScene=sceneId; localStorage.setItem(MANUAL_LOCK_KEY,"1"); settingsNote.textContent="saved to slot."; };
 btnLoad.onclick=()=>{ if(loadSave()){ settingsNote.textContent="loaded. resuming…"; closeSettings(); enqueue(()=>goto(sceneId||"p4_entry")); }else settingsNote.textContent="no save found."; };
-btnClear.onclick=()=>{ clearSave(); state.phase=4; sceneId=null; lines=[]; cur=""; render(); setStatus("RECORDING"); settingsNote.textContent="save cleared."; };
+btnClear.onclick=()=>{ clearSave(); state.phase=4; state.name=""; sceneId=null; lines=[]; cur=""; render(); setStatus("RECORDING"); settingsNote.textContent="save cleared."; };
 
 /* ===== PHASE 3 -> PHASE 4 TRANSFER IMPORT ===== */
 const P4_TRANSFER_KEY="aot_p4_transfer_v1";
@@ -1265,41 +1264,13 @@ const SCENES={
 
   p4_day_choice:{
     bgm:"p4_day",
-    text:()=>{
-      const b=currentBranch();
-      if(b==="sl"){
-        return [
-          "By the time the drill ends, your shoulders ache under the cloak.",
-          "Nobody says you did well. They just move on.",
-          "",
-          "A scout bumps past you and mutters something about saddle checks.",
-          "That’s apparently enough to count as approval here.",
-          "",
-          "You catch yourself still standing too straight.",
-          "Like Maria might call you out if you relax too early."
-        ];
-      }
-      if(b==="mp"){
-        return [
-          "The assignment ends without ceremony.",
-          "A clipboard closes. A door opens. That’s it.",
-          "",
-          "You were seen. Measured, maybe.",
-          "Nobody bothers to say it out loud.",
-          "",
-          "Even after it’s over, you keep your hands where they can be seen."
-        ];
-      }
-      return [
-        "The task ends the way Garrison work seems to end: quietly.",
-        "The ledger’s filled. The rope’s coiled. Nobody makes a speech about it.",
-        "",
-        "A sergeant gives your work one glance and a short nod.",
-        "It’s small, but it counts.",
-        "",
-        "Your hands keep the rhythm of the job a little longer before they settle."
-      ];
-    },
+    text:()=>[
+      "Your hands keep doing the motions even after you stop.",
+      "That’s what scares you.",
+      "",
+      "Nobody thanks you for surviving it.",
+      "They just know that you did."
+    ],
     title:"continue",
     choices:[
       {k:"A",label:"Report to evening duty.",fx:{},next:"p4_evening_hub"}
@@ -1539,30 +1510,8 @@ const SCENES={
     ],
     title:"hold",
     choices:[
-      {k:"A",label:"Hold position and wait for command.",fx:{obedience:+1},next:"p4_evening_gar_fire"},
+      {k:"A",label:"Hold position and wait for command.",fx:{obedience:+1},next:"p4_evening_hub_return"},
       {k:"B",label:"Lean to get a better look anyway.",fx:{hesitation:+1,warnFlawless:1},next:"p4_evening_gar_risk"}
-    ]
-  },
-
-  p4_evening_gar_fire:{
-    bgm:"p4_eve",
-    text:()=>[
-      "The command finally comes sharp across the wall.",
-      "",
-      N("Garrison Sergeant Miguel","Fire."),
-      "",
-      "The fuse hisses.",
-      "Then the cannon answers hard enough to shake your teeth.",
-      "",
-      "Flame kicks from the barrel. Smoke rolls over the platform.",
-      "Somewhere below, people on the wall start shouting over each other.",
-      "",
-      "You can’t see much through the smoke.",
-      "But this time, something actually happened — and everyone felt it."
-    ],
-    title:"fire",
-    choices:[
-      {k:"A",label:"Help swab and reset the cannon.",fx:{obedience:+1},next:"p4_evening_hub_return"}
     ]
   },
 
@@ -1801,11 +1750,11 @@ const SCENES={
       }
       return [
         "The alarm chain eases, but nobody relaxes.",
-        "The cannon crews stay at their posts, reloading and checking vents like the next order could come any second.",
+        "The cannon crews stay at their posts until they're told otherwise.",
         "",
-        "Your palms still buzz from the recoil.",
-        "You didn’t just stand there this time.",
-        "You helped fire back."
+        "You notice your hands are still shaking.",
+        "Not from fear.",
+        "From effort."
       ];
     },
     title:"evening",
@@ -2033,27 +1982,35 @@ p5_entry:{
 p5_stage:{
   bgm:"p5_grad",
   text:()=>[
-    "The hall smells like warm wax and old stone.",
+    "The hall smells like oil and old stone.",
     "",
-    "Torches line the walls.",
-    "Boots tap out small nervous rhythms across the floor.",
+    "Torches line the walls in warm, uneven rows.",
+    "It feels less formal than you expected, more real.",
     "",
-    "Your formal collar sits a little wrong.",
-    "Nobody cares. Everyone looks relieved enough to forgive it.",
+    "Formals scratch at your collar.",
+    "Boots shine because everyone tried, not because anyone was ordered twice.",
+    "",
+    "Everyone stands straight.",
+    "Everyone looks a little relieved.",
     "",
     W("Graduation day."),
-    W("Stand straight, cadets."),
+    W("Get into your formals, cadets."),
     "",
-    W("I know some of you expected cheering."),
-    W("You’ll survive without it."),
+    W("I know what you expected."),
+    W("Noise. Applause."),
+    W("A story that ends clean."),
     "",
-    W("Still— you made it here."),
-    W("That counts for something."),
+    W("This is a moment of celebration."),
+    W("Good work. All of you."),
     "",
-    "You spot familiar faces in the rows.",
-    "Some are trying not to smile. Some fail.",
+    W("But listen carefully."),
+    W("The Corps does not reward brilliance."),
+    W("It tolerates reliability."),
     "",
-    "The room feels lighter than training ever did."
+    "You spot faces in the crowd—",
+    "Some familiar, some only remembered by their empty bunks.",
+    "",
+    "The torchlight makes everyone look older."
   ],
   title:"stage",
   choices:[
@@ -2066,92 +2023,105 @@ p5_rollcall:{
   text:()=>{
     const name = state.name || "—";
     const natHere = natPathActive();
-    const prodigy = isProdigy();
 
     const prodigyBlock = [
       "",
       W("Cadet Mira Dreyse."),
       W("Notation: prodigy."),
-      "Mira steps forward like she practiced the walk and hated every second of it.",
-      N("Mira","I just want to do this right."),
-      "She steps back before anyone can make it bigger than that.",
+      "Mira steps forward without missing a beat.",
+      N("Mira","I just.. I want to be ready. I want to be good at this. I want to be useful. For my parents back home."),
+      "Her face doesn’t change, but her shoulders drop when she turns away.",
       "",
       W("Cadet Steve Carrot."),
       W("Notation: prodigy."),
-      "Steve grins too early, then reins it in.",
-      N("Steve","Okay— wow. Did not think that was me."),
-      "A few cadets laugh. Even Steve looks surprised it landed.",
+      "Steve grins first, then remembers this is serious.",
+      N("Steve","Me? Prodigy? He'd chuckle, I just got lucky, y'know..? I'm not that good."),
+      "then the grin fades when he realizes nobody is laughing.",
       ""
     ];
 
-    const natBlock = natHere ? [
+    const natBlock = [
       "",
       W("Cadet Nat."),
+      "",
       W("Record evaluated."),
-      "Nat steps forward, shoulders squared.",
-      "He doesn’t smile, but he doesn’t look miserable either.",
-      ""
-    ] : [];
+      W("Procedure adherence: consistent."),
+      W("Deviations: minimal and contained."),
+      "",
+      "Nat steps forward.",
+      "He doesn’t look proud.",
+      "He looks like someone counting exits—",
+      "and still choosing to stay."
+    ];
 
-    const playerBlock = prodigy ? [
+    const flawlessBlock = (fileStatus() !== "FLAGGED") ? [
       "",
       ...(natHere ? [
-        "Nat glances sideways at you.",
-        "It’s quick, but it’s there.",
+        "You hear Nat inhale like he’s about to speak, then stop.",
+        "He looks at you— not proud, not calm.",
+        "Just hoping.",
         ""
       ] : []),
       W("Lastly—"),
+      "",
       `Cadet ${name}.`,
-      W("Notation: prodigy."),
       "",
-      "For a second the room feels strangely still.",
-      "Then you step forward and it breaks.",
+      "The chamber goes quiet for a second.",
       "",
-      W("Clean record."),
       W("No corrections required."),
+      W("No deviations recorded."),
       "",
-      "It isn’t loud. Nobody claps.",
-      "But a couple of faces brighten anyway.",
+      W("Flawless isn’t excellence."),
+      W("It’s absence of deviation."),
+      "",
+      "For a second, you feel it—",
+      "not victory.",
+      "Just the strange weight of being intact.",
       ...(natHere ? [
         "",
-        "Nat gives the smallest nod.",
-        "From him, it almost counts as applause."
+        "Nat’s mouth twitches like it might become a smile.",
+        "It doesn’t fully make it.",
+        "But he doesn’t look away."
       ] : [])
     ] : [
       "",
       W("Lastly—"),
+      "",
       W("Cadet Yasmine Holt."),
       "",
-      "Another cadet steps forward.",
-      "Your name stays where it is.",
+      "Your name doesn’t echo.",
+      "It stays on paper.",
       ...(natHere ? [
         "",
-        "Nat looks at you for a moment, then back at the front.",
-        "He doesn’t say anything."
+        "Nat glances at you anyway.",
+        "Like he wanted something to go right for once.",
+        "Then he looks away first."
       ] : [])
     ];
 
     return [
-      "Names carry across the chamber.",
-      "Some you know. Some you only know by bunk or rumor.",
+      "Names echo through the chamber.",
+      "Cadets you recognize. Cadets you don’t.",
       "",
       W("Cadet Rolf Brenner."),
       W("Cadet Yasmine Holt."),
       W("Cadet Theo Karsen."),
       W("Cadet Gus Larsen."),
       "",
-      "One by one, they step out and back in again.",
-      "Nobody wants to trip in front of this many witnesses.",
+      "Each steps forward.",
+      "Each receives a mark.",
+      "Each returns to their place like they’re trying not to run.",
       "",
       ...prodigyBlock,
-      ...natBlock,
-      ...playerBlock,
+      ...(natHere ? natBlock : []),
+      ...flawlessBlock,
       "",
-      W("Everyone else—"),
-      W("Congratulations on graduating."),
+      W("Everyone else."),
+      W("Good job for graduating."),
       "",
-      W("After branch assignment, report for your classroom intake."),
-      W("You’re with your branches now. Try to keep up.")
+      W("After picking a branch, you will have a brief classroom phase."),
+      W("You are new intakes. Recruits."),
+      W("You will be taught what your uniform actually means.")
     ];
   },
   title:"rollcall",
@@ -2164,13 +2134,12 @@ p5_rollcall:{
 p5_branch_select:{
   bgm:"p5_grad",
   text:()=>[
-    R("When your branch is called, step forward."),
+    W("Step forward when your branch is called."),
     "",
-    "The banners are already in place.",
-    "Now it’s your turn.",
-    "",
-    "Three branches. Three representatives.",
-    "Pick where you want to start."
+    "The banners stay where they are.",
+    "You’re the one who has to move.",
+    "A representative waits under each one.",
+    "All you have to do is choose."
   ],
   title:"choose branch",
   choices:[
@@ -2182,16 +2151,14 @@ p5_branch_select:{
 p5_branch_retry:{
   bgm:"p5_grad",
   text:()=>[
-    "The Military Police rep barely glances your way.",
+    "The Military Police representative stays where he is.",
+    "The clerk barely glances up.",
     "",
-    R("MP only takes clean records."),
-    R("Not this time."),
+    W("Military Police only takes clean records."),
+    W("You’re still qualified to serve. Just not here."),
     "",
-    "The rejection is fast enough to sting.",
-    "Then the moment moves on without you.",
-    "",
-    "There are still two banners waiting.",
-    "You square up and choose again."
+    "The moment passes fast.",
+    "You’re already being waved toward the other banners."
   ],
   title:"not eligible",
   choices:[
@@ -2205,9 +2172,10 @@ p5_branch_confirm:{
     const natHere = natPathActive() && natShouldFollow(currentBranch() || (state?.path?.branch||"gar"));
     const b = currentBranch() || (state?.path?.branch||"gar");
     if(b==="sl") return [
-      N("Scout Maria","Scout Maria. Support Squadron."),
-      N("Scout Maria","You made it this far, so try to look happy about it."),
-      N("Scout Maria","We’ll worry about the hard part after intake."),
+      N("Scout Maria","Welcome, recruits."),
+      N("Scout Maria","I’m Scout Maria -- Support Squadron."),
+      N("Scout Maria","The Scouts don’t promise survival."),
+      N("Scout Maria","We promise distance. From the walls."),
       "",
       W("Assignment stamped."),
       ...(natHere ? [
@@ -2218,9 +2186,10 @@ p5_branch_confirm:{
       W("Proceed to classroom.")
     ];
     if(b==="mp") return [
-      N("Officer Henry","Officer Henry. Interior Security."),
-      N("Officer Henry","You survived training. Good."),
-      N("Officer Henry","Now try being useful in cleaner boots."),
+      N("Officer Henry","Welcome, recruits."),
+      N("Officer Henry","Officer Henry -- Interior Order Detachment."),
+      N("Officer Henry","Order is not justice."),
+      N("Officer Henry","It’s consistency."),
       "",
       W("Assignment stamped."),
       ...(natHere ? [
@@ -2231,8 +2200,9 @@ p5_branch_confirm:{
       W("Proceed to classroom.")
     ];
     return [
-      N("Guard Vincent","Guard Vincent. Wall Maintenance."),
-      N("Guard Vincent","It’s not flashy, but it keeps the place standing."),
+      N("Guard Vincent","Welcome, recruits."),
+      N("Guard Vincent","Guard Vincent -- Wall Maintenance Detachment."),
+      N("Guard Vincent","Boring keeps people alive."),
       "",
       W("Assignment stamped."),
       ...(natHere ? [
@@ -2257,22 +2227,23 @@ sl_classroom:{
     const natHere = natPathActive() && natShouldFollow("sl");
     const nat = (t)=>N("Nat",t);
     const out = [
+      N("Scout Maria","Take a seat."),
+      "",
       N("Scout Maria","Support Squadron."),
-      N("Scout Maria","We keep the Scouts moving."),
-      N("Scout Maria","Food, spare blades, harness repairs. The glamorous stuff."),
+      N("Scout Maria","We keep the Scouts moving— food, spare blades, harness repairs, all the parts nobody writes songs about."),
       "",
-      N("Scout Maria","At dawn you’re on mount checks."),
-      N("Scout Maria","After that, strap inspection, supply counts, and a short balance run in kit."),
-      N("Scout Maria","If a horse hates you, fix it before it becomes my problem."),
+      N("Scout Maria","Your record got you in the room."),
+      N("Scout Maria","Out there, nobody cares how clean it was. They care whether you can keep up."),
       "",
-      N("Scout Maria","Don’t get stuck on records or titles."),
-      N("Scout Maria","Tomorrow morning, everyone starts equal again.")
+      N("Scout Maria","If you can’t keep up, you’re a liability. Tomorrow, mount checks at dawn."),
+      N("Scout Maria","Make sure your gear is in order. Make sure you can move in it."),
+      N("Scout Maria","Because if you can’t move, you can’t scout. Balance testing will be done briefly. You will need it to utilize movement.")
     ];
     if(natHere){
       out.push(
         "",
-        nat("Mount checks at dawn. Great."),
-        nat("Try not to wake up tangled in your straps.")
+        nat("Heard that? Mount checks at dawn."),
+        nat("Don’t sleep in your harness. It’ll bruise you stupid.")
       );
     }
     return out;
@@ -2289,52 +2260,53 @@ p5_dorm_night:{
     text:()=>{ 
       const b=currentBranch();
       if(b==="sl") return [
-        "The Scout barracks are tighter than you expected.",
-        "Bunks stacked high. Gear everywhere. Somehow it still works.",
+        "The Scout barracks are narrower than you expected.",
+        "Bunks stacked. Gear hung like it has its own rules.",
         "",
-        "Somebody is already talking too loudly about horses.",
-        "Someone else is laughing like training ended ten minutes ago.",
+        "Someone mutters a prayer to a gate they haven’t seen yet.",
+        "Someone else sharpens a blade that won’t matter inside the Walls.",
         "",
-        N("Scout Maria","Lights out soon."),
-        N("Scout Maria","Enjoy the quiet while it lasts."),
+        N("Scout Maria","Lights out."),
+        N("Scout Maria","Qualification at first bell. Don’t be late."),
         "",
-        "Mira sits on the edge of her bunk, braiding her hair.",
-        N("Steve","So… Scouts. That’s kind of huge, right?"),
-        N("Mira","Sleep first. Huge later."),
+        "Mira sits on the edge of her bunk, she's braiding her hair.",
+        N("Steve","So… we’re Scouts now. That’s insane. Party anyone?"),
+        N("Mira","We’re recruits. Don’t skip steps."),
         "",
-        "You lie down before anyone can turn it into a speech.",
-        "For once, the room feels more excited than scared."
+        "Your body remembers training like a reflex.",
+        "You lie down anyway.",
+        "",
+        "For once, nobody is counting you out loud."
       ];
       if(b==="mp") return [
-        "The Military Police dorm smells like polish, paper, and better food than you expected.",
-        "Beds are aligned with almost insulting precision.",
+        "The Military Police dorm smells like polish and paper.. And weirdly enough.. steak?",
+        "Beds aligned. Boots placed as if someone will inspect the air itself.",
         "",
-        "Someone in the next room is already boasting quietly.",
-        "It sounds rehearsed.",
+        "From the corridor, a quiet conversation ends the moment you listen.",
         "",
-        N("Officer Henry","Rest while you can."),
-        N("Officer Henry","Tomorrow starts early, and I do not grade kindly."),
+        N("Officer Henry","Rest."),
+        N("Officer Henry","Qualification in the morning. Uniform ready."),
         "",
         "You sit down and realize you’re still sitting straight.",
-        "That gets a laugh out of somebody across the room.",
+        "Old habits show up early here.",
         "",
-        "Outside, the city keeps humming.",
-        "Inside, everything is tidy enough to feel new."
+        "Somewhere beyond the windows: the city hums.",
+        "Inside: everything is arranged to look calm."
       ];
       return [
-        "Garrison quarters stay loud right up until the lamps go out.",
-        "It sounds more alive than chaotic tonight.",
+        "Garrison quarters are loud until the last lamp goes out.",
+        "Then the room becomes honest.",
         "",
-        "Bunks creak. Someone laughs. Nobody tells them to stop.",
+        "Bunks creak. Someone coughs. Someone laughs once and stops.",
         "",
-        N("Guard Vincent","You made it through day one."),
-        N("Guard Vincent","That earns you at least one decent night of sleep."),
+        N("Guard Vincent","You made it through the first day."),
+        N("Guard Vincent","Tomorrow decides what you can carry."),
         "",
-        "Your hands still smell like rope and metal.",
-        "You wash up anyway and climb into bed.",
+        "Your hands smell like rope and metal.",
+        "You wash them and the smell stays anyway.",
         "",
-        "The Wall hangs over everything as usual.",
-        "Tonight, it feels more steady than heavy."
+        "You sleep with the Wall above you—",
+        "heavy, steady, unmoving."
       ];
     },
     title:"night",
@@ -2347,24 +2319,18 @@ mp_classroom:{
   bgm:"p5_grad",
   text:()=>{
       const natHere = natPathActive() && natShouldFollow("mp");
-      const out = [
-    N("Officer Henry","Interior Security."),
+      return [
+    N("Officer Henry","Sit down."),
     "",
-    N("Officer Henry","Inside the walls, most problems start small."),
-    N("Officer Henry","Your job is to catch them before they become embarrassing."),
+    N("Officer Henry","Interior Order Detachment."),
+    N("Officer Henry","You will learn procedure until it replaces instinct."),
     "",
-    N("Officer Henry","Tomorrow is code of conduct, report forms, and checkpoint procedure."),
-    N("Officer Henry","After that, inspection walk. Uniform, posture, notebook."),
-    N("Officer Henry","Read the code once tonight so I can pretend you were prepared.")
+    N("Officer Henry","In the streets, hesitation will look like guilt."),
+    N("Officer Henry","And guilt is paperwork somebody else will happily file."),
+    "",
+    N("Officer Henry","Tomorrow: code of conduct."),
+    N("Officer Henry","I want you all to memorize it. Word for word.")
   ];
-  if(natHere){
-    out.push(
-      "",
-      N("Nat","He seems fun."),
-      N("Nat","Try not to get us both yelled at tomorrow.")
-    );
-  }
-  return out;
   },
   title:"classroom",
   choices:[
@@ -2376,24 +2342,18 @@ sg_classroom:{
   bgm:"p5_grad",
   text:()=>{
       const natHere = natPathActive() && natShouldFollow("gar");
-      const out = [
-    N("Guard Vincent","Garrison."),
+      return [
+    N("Guard Vincent","Settle in."),
     "",
-    N("Guard Vincent","Most of this work is routine."),
-    N("Guard Vincent","That’s not an insult. Routine is how the place holds together."),
+    N("Guard Vincent","I lead the Wall Maintenance Detachment, but I’m not here to talk about walls."),
+    N("Guard Vincent","All of you recruits are the quiet parts of the Wall. The part that doesn’t get songs."),
     "",
-    N("Guard Vincent","Tomorrow we’re doing inspection runs on the outer wall."),
-    N("Guard Vincent","Cracks, braces, supply posts, then a cannon line check before noon."),
-    N("Guard Vincent","Bring a ledger. Bring patience. Try to keep both with you.")
+    N("Guard Vincent","If you want glory, you picked the WRONG branch."),
+    N("Guard Vincent","But if you want to wake up tomorrow, you picked right."),
+    "",
+    N("Guard Vincent","Tomorrow, we will do inspection routines on the outer walls of Shiganshina."),
+    N("Guard Vincent","Bring a ledger, Bring patience. Make yourselves useful.")
   ];
-  if(natHere){
-    out.push(
-      "",
-      N("Nat","A ledger. Brutal."),
-      N("Nat","At least we’re not hanging off a horse before sunrise.")
-    );
-  }
-  return out;
   },
   title:"classroom",
   choices:[
@@ -2408,18 +2368,19 @@ sg_classroom:{
     text:()=>[
       PICK("Phase 5. Tomorrow."),
       "",
-      "You slept better than you expected.",
-      "Not perfectly. Just enough.",
+      "You sleep enough to feel human again.",
+      "That has to count for something.",
       "",
-      "It’s your first real morning in uniform.",
-      "People actually look awake for once.",
+      "Morning rollcall is shorter now.",
+      "The sun is already up and the yard is busy.",
       "",
-      R("Alright. Line up."),
-      R("Today’s just qualification."),
+      R("Alright."),
+      R("Today is qualification."),
+      R("Balance checks first."),
+      "",
       R("Nothing dramatic."),
-      "",
-      R("We’re checking balance, movement, and whether your gear hates you."),
-      R("Best case, we all get through this with our dignity intact.")
+      R("Just proof you can move in your gear without embarrassing yourself."),
+      R("If your footing is bad, everything after that gets worse.")
     ],
     title:"tomorrow",
     choices:[
@@ -2430,15 +2391,15 @@ sg_classroom:{
   p5_rhythm_brief:{
     bgm:"p5_tomorrow",
     text:()=>[
-      "The setup is waiting in the yard.",
-      "Two rails, two boards, and painted marks where your boots are supposed to land.",
+      "The apparatus is already set up in the yard.",
+      "Two rails, two boards, and a painted line where your feet are meant to land.",
       "",
-      "A handler taps one plank with a stick.",
-      "Sharp. Annoying. Effective.",
+      "A handler taps the plank with a stick.",
+      "The sound cuts through the yard.",
       "",
       R("Left. Right."),
-      R("Stay on time."),
-      R("If you miss the rhythm, the platform will let you know."),
+      R("Stay on rhythm."),
+      R("If you miss a step, recover fast and keep moving."),
       "",
       PICK("TEST: BALANCE / RHYTHM.")
     ],
@@ -2463,11 +2424,12 @@ sg_classroom:{
   p5_rhythm_pass:{
     bgm:"p5_tomorrow",
     text:()=>[
-      "Your boots land clean.",
-      "Then clean again.",
+      "Your boots land where they're told.",
+      "Again. Again.",
       "",
-      R("There you go."),
-      R("Knew at least one of you would make this look easy.")
+      "",
+      R("Acceptable."),
+      R("Let's get you all processed.")
     ],
     title:"result",
     choices:[
@@ -2479,15 +2441,16 @@ sg_classroom:{
     bgm:"p5_tomorrow",
     text:()=>[
       "Your timing slips.",
-      "Not badly. Just enough to annoy you.",
+      "Not by much.",
+      "Enough.",
       "",
-      "The board clips your heel.",
-      "You recover before it turns into a full disaster.",
+      "The board kicks your heel.",
+      "Your body corrects late.",
       "",
-      R("Messy."),
-      R("Still counts. Fix it next round."),
+      R("..You failed."),
+      R("Continue. You've already made it this far anyways."),
       "",
-      "A few people smirk. You’ll live."
+      "A bruise is still a bruise even when you stay standing."
     ],
     title:"result",
     choices:[
@@ -2499,61 +2462,35 @@ sg_classroom:{
     bgm:"p5_tomorrow",
     text:()=>{
       const b=currentBranch();
-      const natHere = natPathActive() && natShouldFollow(b);
       if(b==="sl") return [
-        "You end up under a thin banner that keeps threatening to fold in on itself.",
+        "You end up under the Scout banner with a handful of other new faces.",
         "",
         N("Scout Maria","Support Squadron."),
-        N("Scout Maria","At dawn it’s mount checks. After that, straps, supply bins, and a short run in full kit."),
-        N("Scout Maria","If your horse bites, kicks, or judges you, sort it out before breakfast."),
+        N("Scout Maria","We handle the work that keeps everyone else moving."),
+        N("Scout Maria","Mount checks at dawn. Spare straps after that. Supply bins before noon."),
         "",
-        ...(natHere ? [
-          N("Nat","Great. Horses before sunrise."),
-          N("Nat","If one steps on me, I’m haunting the stable.")
-        ] : [
-          N("Mira","Mount checks first means we should sleep in our boots."),
-          N("Steve","If that horse throws me, just tell people I looked cool doing it.")
-        ]),
-        "",
-        N("Scout Maria","We keep people moving, fed, and patched up enough to complain."),
-        N("Scout Maria","Keep up and today stays easy.")
+        "She glances toward the gate before looking back at you.",
+        N("Scout Maria","Keep up, ask when you need help, and don’t act fearless just to impress somebody.")
       ];
       if(b==="mp") return [
-        "The floor’s clean enough to make you careful where you step.",
+        "You’re redirected toward polished floors and a room that already smells like ink.",
         "",
-        N("Officer Henry","Interior Security."),
-        N("Officer Henry","This morning is code of conduct, report forms, and checkpoint procedure."),
-        N("Officer Henry","After that, inspection walk. Uniform, posture, notebook."),
+        N("Officer Henry","Interior Security Detachment."),
+        N("Officer Henry","Tomorrow is code of conduct, report forms, and checkpoint procedure."),
+        N("Officer Henry","After that, inspection rounds."),
         "",
-        ...(natHere ? [
-          N("Nat","So we get judged for writing neatly now."),
-          N("Nat","Amazing. I almost miss nearly falling off things.")
-        ] : [
-          N("Mira","Checkpoint procedure sounds less bad than it probably is."),
-          N("Steve","If the code of conduct says I can’t blink wrong, I’m done for.")
-        ]),
-        "",
-        N("Officer Henry","Do your job right and the day stays quiet."),
-        N("Officer Henry","That’s the goal.")
+        N("Officer Henry","If you do your job well, the day stays quiet."),
+        N("Officer Henry","That is the point.")
       ];
       return [
-        "You’re back under the wall again.",
-        "This time it feels a little more like yours.",
+        "You’re placed under the Wall’s shadow again.. it's familiar, heavy.",
         "",
-        N("Guard Vincent","Garrison."),
-        N("Guard Vincent","Inspection runs first. Outer wall braces, supply posts, then a cannon line check before noon."),
-        N("Guard Vincent","Nothing dramatic, unless someone forgot to maintain something important."),
+        N("Guard Vincent","Hey hey recruits."),
+        N("Guard Vincent","Southern Garrison Detachment."),
+        N("Guard Vincent","We fix what breaks before the people notices."),
         "",
-        ...(natHere ? [
-          N("Nat","A ledger and a cannon line. That’s a very Garrison sentence."),
-          N("Nat","At least if something explodes, we’ll get a story out of it.")
-        ] : [
-          N("Mira","Inspection runs sound quiet. I like quiet."),
-          N("Steve","Cannon line check is where you say it’s routine and then something definitely goes wrong, right?")
-        ]),
-        "",
-        N("Guard Vincent","We keep things from falling apart."),
-        N("Guard Vincent","Do it right and the whole day feels simple.")
+        N("Guard Vincent","It's boring.. but boring is good."),
+        N("Guard Vincent","Boring means tomorrow still shows up.")
       ];
     },
     title:"assignment",
@@ -2564,66 +2501,21 @@ sg_classroom:{
 
   p5_tomorrow_end:{
   bgm:"p5_tomorrow",
-  text:()=>{
-    const b=currentBranch();
-    const natHere = natPathActive() && natShouldFollow(b);
-    if(b==="sl") return [
-      "Back inside, the room is louder than it was this morning.",
-      "Harness buckles hit tabletops. Somebody’s already comparing horse bites.",
-      "",
-      N("Scout Maria","Not bad."),
-      N("Scout Maria","Dawn checks tomorrow too, so don’t celebrate like idiots."),
-      "",
-      ...(natHere ? [
-        N("Nat","I survived the straps and the horse breath. Historic day."),
-        N("Nat","You did alright.")
-      ] : [
-        N("Mira","That could've gone worse."),
-        N("Steve","That is the nicest thing anyone has said about me all week.")
-      ]),
-      "",
-      "People are smiling now without trying to hide it.",
-      PICK("End of Phase 5.")
-    ];
-    if(b==="mp") return [
-      "The room fills with paper, low conversation, and a few relieved exhalations.",
-      "Even Henry looks slightly less impossible from this angle.",
-      "",
-      N("Officer Henry","You made it through the easy part."),
-      N("Officer Henry","Try to keep that standard tomorrow."),
-      "",
-      ...(natHere ? [
-        N("Nat","If this was the easy part, I’m filing a complaint in advance."),
-        N("Nat","Still. Could’ve been worse.")
-      ] : [
-        N("Mira","You still look terrified."),
-        N("Steve","That’s just my professional face.")
-      ]),
-      "",
-      "A few people laugh under their breath.",
-      "That feels close enough to celebration.",
-      PICK("End of Phase 5.")
-    ];
-    return [
-      "By the time you get back inside, half the room is talking over the other half.",
-      "Somebody’s already arguing about whose handwriting is the worst.",
-      "",
-      N("Guard Vincent","Good work."),
-      N("Guard Vincent","Inspection runs at dawn again, so enjoy the peace while you have it."),
-      "",
-      ...(natHere ? [
-        N("Nat","A cannon line check and nobody died. Strong start."),
-        N("Nat","I’ll call that a win.")
-      ] : [
-        N("Mira","See? Quiet day."),
-        N("Steve","You just said that after the cannon line. That feels cursed.")
-      ]),
-      "",
-      "The whole place feels lighter than it did yesterday.",
-      "You’re starting to fit inside it.",
-      PICK("End of Phase 5.")
-    ];
-  },
+  text:()=>[
+    "You file into a room that smells like chalk and worn wood.",
+    "Maps line the walls. Someone's already talking too loud in the back.",
+    "",
+    R("That’s enough for today."),
+    R("You made it through."),
+    "",
+    "A few laughs slip through the room.",
+    "The tension finally gives a little.",
+    "",
+    "It doesn’t feel like an ending.",
+    "More like the day everyone stops pretending this isn’t real.",
+    "",
+    PICK("End of Phase 5.")
+  ],
   end:true
   },
 
@@ -2662,7 +2554,7 @@ function openBranchSelect(){
 
   // Update MP eligibility note + subtle locked look
   const mpCard = branchSelect.querySelector('.branchCard[data-branch="mp"]');
-  const lockedMp = !state.flawless;
+  const lockedMp = fileStatus() === "FLAGGED";
   if(mpCard) mpCard.classList.toggle("locked", lockedMp);
   if(mpNote) mpNote.textContent = lockedMp ? "Requires flawless record." : "Order is mercy.";
 }
@@ -2679,7 +2571,7 @@ if(branchSelect){
     const b = card.dataset.branch; // "sl" | "gar" | "mp"
 
     // MP gate
-    if(b==="mp" && !state.flawless){
+    if(b==="mp" && fileStatus() === "FLAGGED"){
       closeBranchSelect();
       enqueue(()=>goto("p5_branch_retry"));
       return;
